@@ -2,40 +2,16 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a1310">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CW Copy Trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+  /* 常にダークモード（OS の設定に関係なく） */
   :root{
-    --bg:#f1f4f0;
-    --surface:#ffffff;
-    --surface-2:#e7ece5;
-    --border:#d1d9cd;
-    --text:#16211b;
-    --text-dim:#5c6a5f;
-    --accent:#1c8a58;
-    --accent-strong:#146a43;
-    --accent-contrast:#ffffff;
-    --ok:#1c8a58;
-    --bad:#b3261e;
-    --gold:#a86a00;
-    --backdrop:rgba(10,20,15,.45);
-    --shadow: 0 1px 2px rgba(20,30,20,.06), 0 8px 24px rgba(20,30,20,.05);
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#0a1310; --surface:#101d17; --surface-2:#152420; --border:#25392f;
-      --text:#e7f1ea; --text-dim:#8caa9c; --accent:#48e08f; --accent-strong:#6bf0a3;
-      --accent-contrast:#06150e; --ok:#48e08f; --bad:#ff7a72; --gold:#ffc85a;
-      --backdrop:rgba(0,0,0,.6);
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"]{
     --bg:#0a1310; --surface:#101d17; --surface-2:#152420; --border:#25392f;
     --text:#e7f1ea; --text-dim:#8caa9c; --accent:#48e08f; --accent-strong:#6bf0a3;
     --accent-contrast:#06150e; --ok:#48e08f; --bad:#ff7a72; --gold:#ffc85a;
