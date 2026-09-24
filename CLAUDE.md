@@ -22,6 +22,7 @@ tests/smoke.js        Playwright による簡易動作確認
 - **成果物のファイル名は `index.html`**。変更したら毎回ユーザーに最新の index.html を渡す。
 - 外部ライブラリなし・ビルドなし・1ファイルを維持。フォントのみ Google Fonts（Noto Sans JP / Space Mono）。オフラインでも動くこと。
 - 変更後の確認: `node --check`（script 部分）、`python3 tools/build_data.py --check`、`node tests/smoke.js`。
+- **常にダークモード**（OS のライト/ダーク設定に関係なく）。配色は `:root` の CSS 変数1組だけ。ライト用の配色・切替は持たない。
 - 記録・設定は localStorage のみ（`cwtrainer.settings` / `cwtrainer.stats` / `cwtrainer.highscores`）。すべて try/catch で包む。
 
 ## 音声・タイミング
