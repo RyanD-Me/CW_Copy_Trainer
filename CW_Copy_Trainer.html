@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CW Copy Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f1f4f0;
+    --surface:#ffffff;
+    --surface-2:#e7ece5;
+    --border:#d1d9cd;
+    --text:#16211b;
+    --text-dim:#5c6a5f;
+    --accent:#1c8a58;
+    --accent-strong:#146a43;
+    --accent-contrast:#ffffff;
+    --ok:#1c8a58;
+    --bad:#b3261e;
+    --gold:#a86a00;
+    --backdrop:rgba(10,20,15,.45);
+    --shadow: 0 1px 2px rgba(20,30,20,.06), 0 8px 24px rgba(20,30,20,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a1310; --surface:#101d17; --surface-2:#152420; --border:#25392f;
+      --text:#e7f1ea; --text-dim:#8caa9c; --accent:#48e08f; --accent-strong:#6bf0a3;
+      --accent-contrast:#06150e; --ok:#48e08f; --bad:#ff7a72; --gold:#ffc85a;
+      --backdrop:rgba(0,0,0,.6);
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1310; --surface:#101d17; --surface-2:#152420; --border:#25392f;
+    --text:#e7f1ea; --text-dim:#8caa9c; --accent:#48e08f; --accent-strong:#6bf0a3;
+    --accent-contrast:#06150e; --ok:#48e08f; --bad:#ff7a72; --gold:#ffc85a;
+    --backdrop:rgba(0,0,0,.6);
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+    padding-inline:16px;
+  }
+  .app{ max-width:940px; margin-inline:auto; display:flex; flex-direction:column; gap:20px; padding-block:24px 40px; }
+  h1,h2{ font-family:"Space Mono",monospace; letter-spacing:.01em; text-wrap:balance; margin:0; }
+  h1{ font-size:1.35rem; }
+  h2{ font-size:.95rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:12px; }
+  p{ margin:0; }
+  .mono{ font-family:"Space Mono",monospace; }
+
+  .topbar{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{
+    font-family:"Space Mono",monospace; font-size:1.4rem; font-weight:700; color:var(--accent);
+    background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .tagline{ color:var(--text-dim); font-size:.85rem; margin-top:2px; }
+
+  .tabs{ display:flex; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:4px; align-self:flex-start; }
+  .tab{
+    font-family:"Noto Sans JP",sans-serif; font-size:.9rem; font-weight:500;
+    padding:8px 16px; border-radius:9px; border:none; background:none; color:var(--text-dim); cursor:pointer;
+  }
+  .tab[aria-selected="true"]{ background:var(--surface); color:var(--text); box-shadow:var(--shadow); font-weight:700; }
+  .tab:disabled{ opacity:.45; cursor:not-allowed; }
+  .tab:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); }
+  .panel-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+
+  .layout{ display:grid; grid-template-columns:1.6fr 1fr; gap:20px; align-items:start; }
+  @media (max-width:720px){ .layout{ grid-template-columns:1fr; } }
+
+  .controls-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    font-family:"Noto Sans JP",sans-serif; font-size:.9rem; font-weight:500;
+    padding:10px 16px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); cursor:pointer;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--accent); }
+  .btn:focus-visible, .ghost-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.primary{ background:var(--accent); color:var(--accent-contrast); border-color:var(--accent); font-weight:700; }
+  .btn.accent{ background:var(--surface); border-color:var(--accent); color:var(--accent-strong); font-weight:700; }
+  .btn.danger{ background:var(--bad); border-color:var(--bad); color:#fff; font-weight:700; }
+  .btn.fixed-w{ white-space:nowrap; min-width:7.5em; }
+  .btn.mute-w{ min-width:10em; }
+  .btn.on{ border-color:var(--bad); color:var(--bad); }
+  .ghost-btn{ background:none; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; padding:6px 12px; font-size:.8rem; cursor:pointer; font-family:inherit; }
+  .ghost-btn:hover{ color:var(--text); border-color:var(--accent); }
+
+  .answer-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .code-input{
+    flex:1 1 200px; min-width:0; font-family:"Space Mono",monospace; font-size:1.05rem;
+    text-transform:uppercase; letter-spacing:.05em; padding:10px 14px; border-radius:9px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+  }
+  .code-input:focus-visible, .text-input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .code-input:disabled{ opacity:.5; }
+  .text-input{
+    width:100%; font-family:inherit; font-size:.9rem; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+  }
+
+  /* practice */
+  .play-status{ font-family:"Space Mono",monospace; font-size:.75rem; letter-spacing:.1em; color:var(--text-dim); margin-bottom:12px; }
+  .practice-controls{ margin-bottom:14px; }
+  .feedback{ margin-top:16px; border-top:1px dashed var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .feedback-row{ display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .fb-label{ color:var(--text-dim); font-size:.78rem; min-width:88px; flex-shrink:0; }
+  .feedback-row .mono{ font-size:1rem; letter-spacing:.04em; overflow-wrap:anywhere; }
+  .morse-code{ color:var(--text-dim); letter-spacing:.15em; }
+  .ok{ color:var(--ok); }
+  .bad{ color:var(--bad); text-decoration:line-through; text-decoration-thickness:1.5px; }
+  .verdict{ font-weight:700; font-family:"Space Mono",monospace; }
+  .verdict.ok{ color:var(--ok); }
+  .verdict.bad{ color:var(--bad); text-decoration:none; }
+
+  /* score attack */
+  .lead{ font-size:.9rem; line-height:1.7; margin-bottom:14px; }
+  .tiers{ list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .tiers li{
+    display:grid; grid-template-columns:4.5em 1fr auto; gap:10px; align-items:center;
+    padding:8px 12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); font-size:.85rem;
+  }
+  .tier-range{ font-family:"Space Mono",monospace; color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+  .tier-ex{ color:var(--text-dim); font-size:.8rem; text-align:right; }
+  @media (max-width:460px){
+    .tiers li{ grid-template-columns:4.5em 1fr; }
+    .tier-ex{ grid-column:2; text-align:left; }
+  }
+  .mode-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .mode-row .field{ flex:1 1 180px; }
+  .idle-foot{ display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .idle-foot .field{ flex:1 1 180px; margin:0; }
+
+  .hud{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
+  .hud-item{ background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:2px; }
+  .hud-label{ font-size:.7rem; color:var(--text-dim); }
+  .hud-num{ font-family:"Space Mono",monospace; font-size:1.8rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .hud-level{ font-family:"Space Mono",monospace; font-size:1.1rem; font-weight:700; line-height:1.2; }
+  .hud-sub{ font-size:.7rem; color:var(--text-dim); }
+  .hud-num.low{ color:var(--bad); }
+  .timebar{ height:6px; border-radius:3px; background:var(--surface-2); border:1px solid var(--border); overflow:hidden; margin-bottom:14px; }
+  .timebar > div{ height:100%; background:var(--accent); width:100%; }
+  .timebar.low > div{ background:var(--bad); }
+  .atk-status{
+    font-family:"Space Mono",monospace; text-align:center; padding:14px 8px; margin-bottom:14px;
+    border-radius:10px; border:1px dashed var(--border); color:var(--text-dim); font-size:.9rem; letter-spacing:.08em;
+  }
+  .atk-status.big{ font-size:2.4rem; color:var(--accent-strong); font-weight:700; padding:6px 8px; }
+  .atk-feedback{ min-height:1.6em; margin-top:10px; font-family:"Space Mono",monospace; font-size:.9rem; }
+  .atk-feedback .bad{ text-decoration:none; }
+  .atk-controls{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--border); }
+
+  .result-score{ display:flex; align-items:baseline; gap:6px; margin-bottom:6px; }
+  .result-score .mono{ font-size:3.2rem; font-weight:700; color:var(--accent-strong); line-height:1; font-variant-numeric:tabular-nums; }
+  .res-badge{ font-weight:700; color:var(--gold); margin-bottom:10px; min-height:1.4em; }
+  .res-last{ font-size:.85rem; color:var(--text-dim); margin-bottom:10px; overflow-wrap:anywhere; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .chip{ font-family:"Space Mono",monospace; font-size:.8rem; padding:3px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); }
+
+  /* settings */
+  .field{ margin-bottom:14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{ display:flex; justify-content:space-between; gap:8px; font-size:.82rem; color:var(--text-dim); margin-bottom:6px; }
+  .field .val{ color:var(--text); font-family:"Space Mono",monospace; }
+  select, input[type="range"]{ width:100%; }
+  select{ font-family:"Noto Sans JP",sans-serif; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); }
+  input[type="range"]{ accent-color:var(--accent); }
+  .stepper{ display:flex; align-items:stretch; gap:8px; }
+  .stepper input[type="number"]{
+    width:5.5em; font-family:"Space Mono",monospace; font-size:1.05rem; text-align:right;
+    padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    -moz-appearance:textfield; appearance:textfield;
+  }
+  .stepper input[type="number"]::-webkit-inner-spin-button, .stepper input[type="number"]::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+  .stepper input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .stepper input:disabled{ opacity:.45; }
+  .step-btns{ display:flex; flex-direction:column; gap:2px; }
+  .step{
+    flex:1; width:34px; min-height:18px; padding:0; font-size:.65rem; line-height:1; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text); border-radius:5px;
+  }
+  .step:hover:not(:disabled){ border-color:var(--accent); color:var(--accent-strong); }
+  .step:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .step:disabled{ opacity:.4; cursor:not-allowed; }
+  .stepper .unit{ align-self:center; font-size:.8rem; color:var(--text-dim); font-family:"Space Mono",monospace; }
+  input[type="range"]:disabled{ opacity:.45; }
+  .note{ font-size:.75rem; color:var(--text-dim); margin-top:4px; line-height:1.5; }
+  .fixed-row{ display:flex; justify-content:space-between; font-size:.82rem; color:var(--text-dim); padding:8px 0 0; border-top:1px dashed var(--border); margin-top:4px; }
+  .fixed-row .val{ color:var(--text); font-family:"Space Mono",monospace; }
+
+  /* stats */
+  .stats-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
+  @media (max-width:560px){ .stats-grid{ grid-template-columns:repeat(3,1fr); } }
+  .stat{ background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 8px; text-align:center; }
+  .stat-num{ display:block; font-family:"Space Mono",monospace; font-size:1.3rem; font-variant-numeric:tabular-nums; }
+  .stat-label{ font-size:.7rem; color:var(--text-dim); }
+  .log-list{ list-style:none; margin:12px 0 0; padding:0; max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+  .log-list li{ display:flex; justify-content:space-between; gap:10px; font-size:.82rem; padding:7px 10px; border-radius:7px; background:var(--surface-2); border:1px solid var(--border); }
+  .log-list .log-answer{ font-family:"Space Mono",monospace; }
+  .log-icon.ok{ color:var(--ok); }
+  .log-icon.bad{ color:var(--bad); text-decoration:none; }
+
+  /* high scores */
+  .table-wrap{ overflow-x:auto; }
+  .hs-table{ width:100%; border-collapse:collapse; font-size:.85rem; min-width:460px; }
+  .hs-table th{ text-align:left; font-weight:500; font-size:.72rem; color:var(--text-dim); padding:6px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .hs-table td{ padding:8px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .hs-table td.num{ font-family:"Space Mono",monospace; }
+  .hs-table td.score{ font-family:"Space Mono",monospace; font-weight:700; font-size:1rem; }
+  .hs-table tr.rank1 td.score{ color:var(--gold); }
+  .hs-table tr.fresh td{ background:var(--surface-2); }
+  .hs-del{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:.95rem; padding:2px 6px; border-radius:6px; }
+  .hs-del:hover{ color:var(--bad); }
+  .hs-del:focus-visible{ outline:2px solid var(--accent); }
+
+  /* reference / tips */
+  details.panel summary{ cursor:pointer; font-family:"Space Mono",monospace; font-size:.9rem; letter-spacing:.03em; list-style:none; }
+  details.panel summary::-webkit-details-marker{ display:none; }
+  details.panel summary::before{ content:"▸ "; color:var(--accent); }
+  details.panel[open] summary::before{ content:"▾ "; }
+  .ref-grid{ margin-top:14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px 12px; }
+  .ref-cell{ display:flex; justify-content:space-between; gap:8px; padding:6px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); font-size:.85rem; }
+  .ref-cell .ref-code{ color:var(--accent-strong); letter-spacing:.1em; white-space:nowrap; }
+  .mc{ white-space:nowrap; }
+  .tips ul{ margin:14px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:.88rem; line-height:1.6; }
+  .foot{ text-align:center; color:var(--text-dim); font-size:.75rem; }
+
+  /* modal */
+  .modal{ position:fixed; inset:0; background:var(--backdrop); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10; }
+  .modal-box{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; max-width:380px; width:100%; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:16px; }
+  .modal-box p{ line-height:1.7; font-size:.92rem; }
+  .modal-box .controls-row{ justify-content:flex-end; }
+
+  .sr-label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+
+
+<style>[hidden]{display:none!important} body{margin:0;font-size:14px}</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand-mark">•—</div>
+    <div>
+      <h1>CW Copy Trainer</h1>
+      <p class="tagline">CW(電信)聞き取り練習</p>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="モード">
+    <button class="tab" role="tab" id="tabPractice" aria-selected="true">通常練習</button>
+    <button class="tab" role="tab" id="tabAttack" aria-selected="false">スコアアタック</button>
+  </div>
+
+  <main class="layout">
+    <div>
+      <!-- Practice -->
+      <section class="panel" id="practicePanel" aria-label="通常練習">
+        <p class="play-status" id="playStatus">待機中</p>
+        <div class="controls-row practice-controls">
+          <button id="playBtn" class="btn primary fixed-w">▶ 再生する</button>
+          <button id="pReplayBtn" class="btn">↻ 頭から再生</button>
+          <button id="nextBtn" class="btn" disabled>次の問題 →</button>
+        </div>
+        <div class="answer-row">
+          <label for="guessInput" class="sr-label">聞き取った内容を入力</label>
+          <input id="guessInput" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="聞こえた内容を入力…">
+          <button id="checkBtn" class="btn accent">判定する</button>
+        </div>
+        <div id="feedback" class="feedback" hidden>
+          <div class="feedback-row"><span class="fb-label">あなたの回答</span><span id="fbGuess" class="mono"></span></div>
+          <div class="feedback-row"><span class="fb-label">正解</span><span id="fbAnswer" class="mono"></span></div>
+          <div class="feedback-row"><span class="fb-label">符号</span><span id="fbMorse" class="mono morse-code"></span></div>
+          <div id="fbVerdict" class="verdict"></div>
+        </div>
+      </section>
+
+      <!-- Score attack -->
+      <section class="panel" id="attackPanel" aria-label="スコアアタック" hidden>
+        <div id="atkIdle">
+          <h2 id="atkHeading">スコアアタック · 2分</h2>
+          <div class="mode-row">
+            <div class="field">
+              <label for="atkMode">モード</label>
+              <select id="atkMode">
+                <option value="practice">練習モード</option>
+                <option value="callsign">コールサインモード</option>
+                <option value="number">コンテストナンバーモード</option>
+                <option value="contest">コンテストモード</option>
+              </select>
+            </div>
+            <div class="field" id="atkContestField">
+              <label for="atkContest">コンテスト</label>
+              <select id="atkContest">
+                <option value="allja">ALL JA/6m AND DOWN</option>
+                <option value="fd">FD</option>
+                <option value="okayama">オール岡山</option>
+                <option value="acag">全市全郡</option>
+              </select>
+            </div>
+          </div>
+          <p class="lead" id="atkModeDesc"></p>
+          <ol class="tiers" id="atkTiers">
+            <li><span class="tier-range">0–2点</span><span>英数字1文字</span><span class="mono tier-ex">例: A · 1</span></li>
+            <li><span class="tier-range">3–5点</span><span>2文字の略符号・数字の挨拶</span><span class="mono tier-ex">例: TU · 73 · 88</span></li>
+            <li><span class="tier-range">6–9点</span><span>3文字の略符号・Q符号</span><span class="mono tier-ex">例: QSL · TNX</span></li>
+            <li><span class="tier-range">10–14点</span><span>コールサイン6文字</span><span class="mono tier-ex">例: JR4ZUZ · 7K3ABC</span></li>
+            <li><span class="tier-range">15点〜</span><span>コールサイン6文字または8文字(移動運用)</span><span class="mono tier-ex">例: JR4ZUZ/4</span></li>
+          </ol>
+          <div class="idle-foot">
+            <div class="field">
+              <label for="playerName">プレイヤー名 (任意)</label>
+              <input id="playerName" class="text-input" type="text" maxlength="16" autocomplete="off" placeholder="例: JA1XYZ">
+            </div>
+            <button id="atkStartBtn" class="btn primary">▶ スタート</button>
+          </div>
+        </div>
+
+        <div id="atkRun" hidden>
+          <div class="hud">
+            <div class="hud-item"><span class="hud-label">残り時間</span><span id="atkTime" class="hud-num">60.0</span></div>
+            <div class="hud-item"><span class="hud-label">スコア</span><span id="atkScore" class="hud-num">0</span></div>
+            <div class="hud-item"><span class="hud-label">レベル</span><span id="atkLevel" class="hud-level">Lv1</span><span id="atkLevelSub" class="hud-sub"></span></div>
+          </div>
+          <div class="timebar" id="atkBarWrap"><div id="atkBar"></div></div>
+          <div id="atkStatus" class="atk-status">準備中</div>
+          <div class="answer-row">
+            <label for="atkInput" class="sr-label">聞き取った内容を入力</label>
+            <input id="atkInput" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="正解すると自動で次へ" disabled>
+          </div>
+          <p id="atkFeedback" class="atk-feedback" aria-live="polite"></p>
+          <div class="controls-row atk-controls">
+            <button id="atkPauseBtn" class="btn fixed-w">⏸ 一時停止</button>
+            <button id="atkReplayBtn" class="btn">↻ 頭から再生</button>
+            <button id="atkMuteBtn" class="btn fixed-w mute-w" aria-pressed="false">🔇 ミュート</button>
+            <button id="atkQuitBtn" class="btn">■ 途中終了</button>
+          </div>
+        </div>
+
+        <div id="atkResult" hidden>
+          <h2>結果</h2>
+          <div class="result-score"><span class="mono" id="resScore">0</span><span>点</span></div>
+          <p id="resBadge" class="res-badge"></p>
+          <p id="resLast" class="res-last"></p>
+          <div id="resHistory" class="chips"></div>
+          <div class="controls-row">
+            <button id="atkRetryBtn" class="btn primary">▶ もう一度挑戦</button>
+            <button id="atkBackBtn" class="btn">戻る</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel" aria-label="設定">
+      <h2>設定</h2>
+      <div id="practiceSettings">
+        <div class="field">
+          <label for="charsetSel">出題セット</label>
+          <select id="charsetSel">
+            <option value="letters">英字 (A–Z)</option>
+            <option value="digits">数字 (0–9)</option>
+            <option value="alnum">英数字混在</option>
+            <option value="words" selected>単語</option>
+            <option value="qcodes">Q符号・略符号</option>
+            <option value="callsign">コールサイン (6文字)</option>
+            <option value="callsign_p">コールサイン (移動運用・8文字)</option>
+            <option value="callsign_mix">コールサイン (混合)</option>
+            <option value="contest">コンテストナンバー (ALL JA/6m AND DOWN)</option>
+            <option value="contest_fd">コンテストナンバー (FD)</option>
+            <option value="contest_okayama">コンテストナンバー (オール岡山)</option>
+            <option value="contest_acag">コンテストナンバー (全市全郡)</option>
+          </select>
+        </div>
+        <div class="field" id="groupLenField">
+          <label for="groupLen"><span id="groupLenLabelText">単語数</span><span class="val" id="groupLenVal" hidden></span></label>
+          <div class="stepper"><input type="number" id="groupLen" min="1" max="8" value="2" step="1" inputmode="numeric"><div class="step-btns"><button type="button" class="step" data-for="groupLen" data-d="1" aria-label="1増やす">▲</button><button type="button" class="step" data-for="groupLen" data-d="-1" aria-label="1減らす">▼</button></div></div>
+        </div>
+        <p class="note field" id="groupLenNote"></p>
+      </div>
+      <div class="field">
+        <label for="wcRange">文字速度 Character Speed<span class="val" id="wcVal" hidden></span></label>
+        <div class="stepper"><input type="number" id="wcRange" min="5" max="60" value="20" step="1" inputmode="numeric"><div class="step-btns"><button type="button" class="step" data-for="wcRange" data-d="1" aria-label="1増やす">▲</button><button type="button" class="step" data-for="wcRange" data-d="-1" aria-label="1減らす">▼</button></div><span class="unit">WPM</span></div>
+      </div>
+      <div class="field">
+        <label for="wfRange">全体速度 Farnsworth<span class="val" id="wfVal" hidden></span></label>
+        <div class="stepper"><input type="number" id="wfRange" min="5" max="60" value="14" step="1" inputmode="numeric"><div class="step-btns"><button type="button" class="step" data-for="wfRange" data-d="1" aria-label="1増やす">▲</button><button type="button" class="step" data-for="wfRange" data-d="-1" aria-label="1減らす">▼</button></div><span class="unit">WPM</span></div>
+        <p class="note" id="speedLockNote" hidden>スコアアタック中は記録の公平のため速度を変更できません。</p>
+      </div>
+      <div class="field">
+        <label for="volRange">音量 <span><span class="val" id="volVal"></span>%</span></label>
+        <input type="range" id="volRange" min="0" max="100" value="60">
+      </div>
+    </aside>
+  </main>
+
+  <!-- Practice stats -->
+  <section class="panel" id="statsPanel" aria-label="成績">
+    <h2>成績</h2>
+    <div class="stats-grid">
+      <div class="stat"><span class="stat-num" id="statRounds">0</span><span class="stat-label">出題数</span></div>
+      <div class="stat"><span class="stat-num" id="statCorrect">0</span><span class="stat-label">正解数</span></div>
+      <div class="stat"><span class="stat-num" id="statAcc">—</span><span class="stat-label">正答率</span></div>
+      <div class="stat"><span class="stat-num" id="statStreak">0</span><span class="stat-label">連続正解</span></div>
+      <div class="stat"><span class="stat-num" id="statBest">0</span><span class="stat-label">最高連続</span></div>
+    </div>
+    <button id="resetStatsBtn" class="ghost-btn">成績をリセット</button>
+    <ol id="logList" class="log-list"></ol>
+  </section>
+
+  <!-- High scores -->
+  <section class="panel" id="hsPanel" aria-label="ハイスコア" hidden>
+    <div class="panel-head">
+      <h2 id="hsTitle">ハイスコア (上位10件)</h2>
+      <button id="hsClearBtn" class="ghost-btn">すべて削除</button>
+    </div>
+    <div class="table-wrap">
+      <table class="hs-table">
+        <thead><tr><th>順位</th><th>スコア</th><th>名前</th><th>速度 文字/全体</th><th>日時</th><th><span class="sr-label">削除</span></th></tr></thead>
+        <tbody id="hsBody"></tbody>
+      </table>
+    </div>
+    <p id="hsEmpty" class="note">まだ記録がありません。スコアアタックに挑戦すると、ここに記録が残ります。</p>
+  </section>
+
+  <details class="panel">
+    <summary>モールス符号 早見表</summary>
+    <div id="refGrid" class="ref-grid"></div>
+  </details>
+
+  <details class="panel tips">
+    <summary>練習のヒント</summary>
+    <ul>
+      <li>1文字ずつ「点と線」を数えるのではなく、文字ごとの音のリズムとして丸ごと覚えると速く聞き取れるようになります。</li>
+      <li>Farnsworth方式では文字自体は本番に近い速さで送り、文字間・単語間の間隔だけを広げています。まずは全体速度を下げて慣れ、徐々に両方の速度を上げていくのがおすすめです。</li>
+      <li>スコアアタックでは問題が繰り返し流れます。1回で聞き取れなくても、2回目で残りの文字を埋めましょう。</li>
+    </ul>
+  </details>
+
+  <p class="foot">国際モールス符号を使用しています。記録と設定はこのブラウザ内にのみ保存されます。</p>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalMsg" hidden>
+  <div class="modal-box">
+    <p id="modalMsg"></p>
+    <div class="controls-row">
+      <button id="modalCancel" class="btn">キャンセル</button>
+      <button id="modalOk" class="btn danger">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var TONE_FREQ = 760;
+  var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var DIGITS = '0123456789';
+
+  var MORSE = {
+    A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',
+    K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',
+    U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+    '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
+    '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+    '/':'-..-.'
+  };
+  var REFERENCE_EXTRA = { '?':'..--..', '/':'-..-.' };
+
+  // practice sets
+  var WORDS = ['THE','AND','FOR','ARE','YOU','HAM','RADIO','WAVE','SIGNAL','ANTENNA','CONTACT','MORSE','CODE','PRACTICE','LISTEN','COPY','SEND','RECEIVE','TOWER','STATIC','TUNE','BAND','POWER','FIELD','NIGHT','QUICK','SOUND','SPEED','RHYTHM','KEY'];
+  var QCODES = ['CQ','DE','QTH','QRZ','QSL','QRM','QRN','QRP','QRO','QSY','QRT','RST','TNX','73','88','R'];
+
+  // score attack sets
+  var ABBR2 = ['TU','GM','GA','GE','GN','FB','OM','YL','HI','UR','ES','OP','WX','BK','CL','NR','DR','CU'];
+  var GREET2 = ['73','88'];
+  var ABBR3 = ['QSL','QTH','QRZ','QRM','QRN','QRP','QRO','QSY','QRT','QRV','QSB','QSO','QRS','QRQ','RST','TNX','AGN','PSE','CFM','ANT','RIG','PWR','HPE','CUL','SRI','ABT','FER','GUD','XYL'];
+
+  function pretty(pattern){ return pattern.split('').map(function(c){ return c==='.' ? '•' : '−'; }).join(' '); }
+  function rand(n){ return Math.floor(Math.random()*n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function randChars(pool,n){ var s=''; for(var i=0;i<n;i++){ s+=pool[rand(pool.length)]; } return s; }
+  function randWords(list,n){ var a=[]; for(var i=0;i<n;i++){ a.push(pick(list)); } return a.join(' '); }
+  // Super Check Partial (MASTER.SCP 2026.09.23) 収録の実在局から、J[A-S]・7[K-N]で始まる6文字のみ
+  var CALLS_J = 'JA0ARF JA0AVS JA0BJY JA0BZY JA0CLB JA0CXQ JA0DAI JA0FVU JA0GCI JA0GCY JA0IND JA0IOF JA0IXW JA0JHA JA0JHQ JA0JWQ JA0MJD JA0MOQ JA0NFP JA0QBY JA0RCK JA0RUG JA0RWF JA0TCC JA0VFN JA0VTK JA0XQO JA0XSL JA0YMA JA1AAA JA1ADU JA1AGH JA1AKL JA1ALE JA1ATM JA1AUD JA1AVI JA1AWU JA1AYO JA1AZR JA1AZW JA1BBC JA1BFN JA1BIV JA1BJI JA1BJT JA1BPA JA1BUL JA1BVY JA1BWA JA1CCH JA1CCX JA1CHY JA1CJL JA1CJP JA1COU JA1CPU JA1CRJ JA1CSN JA1CTB JA1CTZ JA1CUF JA1DBG JA1DCK JA1DCO JA1DDZ JA1DKT JA1DOT JA1DYB JA1EFS JA1ELY JA1EMQ JA1ERB JA1EUR JA1FFB JA1FNO JA1FON JA1FWS JA1GDU JA1GFB JA1GFD JA1GHR JA1GOY JA1GQC JA1GVM JA1GZK JA1GZV JA1HGY JA1HNW JA1IAW JA1IAZ JA1ILA JA1IQV JA1IRH JA1IST JA1IZZ JA1JBP JA1JLP JA1JNY JA1KEB JA1KEV JA1KIH JA1KPF JA1KXT JA1KZP JA1LKY JA1LLY JA1LNZ JA1LVX JA1MJN JA1MZM JA1NEZ JA1NFM JA1NKU JA1NVF JA1OHD JA1OHP JA1OQJ JA1OVD JA1PCM JA1PNA JA1PTJ JA1PTO JA1QIF JA1QML JA1QOW JA1QXY JA1RAC JA1RAL JA1RPK JA1RRA JA1RVO JA1RYC JA1SCE JA1SJV JA1SKE JA1STY JA1SVP JA1TBA JA1TBX JA1TMG JA1TUR JA1UII JA1ULF JA1UOA JA1UOC JA1UQI JA1UTZ JA1UXV JA1VDJ JA1VGV JA1VND JA1VUA JA1VWK JA1WHG JA1WPX JA1WQD JA1WQX JA1WSK JA1WTO JA1WWO JA1WZV JA1XEC JA1XRA JA1XUY JA1YAD JA1YBP JA1YEV JA1YGX JA1YNE JA1YPA JA1YQH JA1YSS JA1YXP JA1ZGO JA1ZGP JA1ZLO JA2ATE JA2AXB JA2BCE JA2BIV JA2BMW JA2BQX JA2DGQ JA2DHF JA2DHX JA2EMP JA2FHZ JA2FJP JA2FLA JA2FSM JA2FXP JA2FXV JA2GAL JA2GHP JA2GTW JA2HNP JA2HOL JA2HYD JA2HZA JA2ITK JA2IVK JA2IXS JA2JRS JA2JTN JA2JWH JA2KKA JA2KOG JA2KPW JA2KQE JA2KVB JA2KVD JA2LMY JA2MOG JA2MWV JA2NPS JA2ODB JA2OZM JA2PFO JA2PSV JA2QQC JA2QVP JA2SWH JA2ULV JA2VBK JA2VHG JA2VHO JA2VSU JA2VZL JA2XCR JA2XLV JA2YAK JA2YGP JA2YKA JA2YNI JA3AOP JA3AVO JA3BXF JA3DAY JA3EGE JA3ENN JA3EQC JA3FRI JA3GOJ JA3GZE JA3HBF JA3IBU JA3IJW JA3IKG JA3JND JA3JRI JA3JTG JA3KDJ JA3KGF JA3KIO JA3KKE JA3KWJ JA3LEB JA3LEZ JA3LIL JA3MAT JA3MIB JA3MIO JA3MQY JA3NUT JA3OOK JA3PFY JA3PXI JA3PYH JA3QOS JA3RAR JA3RAZ JA3UWB JA3VOV JA3VQW JA3WNJ JA3XOG JA3YBK JA3YKC JA3YUA JA3YVI JA4BEV JA4BNT JA4BSZ JA4CZM JA4DLF JA4ENY JA4EOX JA4EVN JA4EZP JA4FFZ JA4GQD JA4GXS JA4HEU JA4IAQ JA4JLT JA4JSV JA4KTG JA4LCI JA4LJB JA4LKB JA4MLR JA4MOK JA4MRL JA4OEL JA4OPW JA4RED JA4RMX JA4RWN JA4TUJ JA4UMN JA4VLK JA4VNE JA4WUA JA4XHF JA4YPE JA5AFW JA5CBO JA5CBU JA5CDL JA5CIC JA5CPJ JA5CUX JA5DQH JA5ENO JA5EWQ JA5EXN JA5FBZ JA5FDJ JA5FNX JA5ICH JA5IVG JA5JGV JA5JWQ JA5KJD JA5KPO JA5LGK JA5MXP JA5NSR JA5OVU JA5PXG JA5QAH JA5QJX JA5QYR JA5SUD JA5THU JA5WNH JA6ACZ JA6AVT JA6BCV JA6BDB JA6BWH JA6BXA JA6BZI JA6CDC JA6CNX JA6CTN JA6CVR JA6CYL JA6ELV JA6EML JA6FEG JA6FFK JA6FFO JA6FHF JA6FIO JA6FOF JA6GCE JA6GMC JA6GXP JA6HZN JA6IQG JA6JEJ JA6LCJ JA6MWW JA6NQT JA6ONQ JA6PTH JA6RCH JA6SHL JA6SRB JA6UDI JA6UKY JA6VQA JA6VZB JA6WFM JA6WIF JA6WJL JA6XFV JA6YBR JA6YLP JA6ZPR JA7ACM JA7AUM JA7BEW JA7CUA JA7CVL JA7DNO JA7EPO JA7EVH JA7FAS JA7FFN JA7FTR JA7GYP JA7HXG JA7HYS JA7KED JA7KPI JA7KQC JA7LLL JA7LMZ JA7MAD JA7MCB JA7MSQ JA7MVX JA7MWC JA7MYQ JA7NLW JA7NPV JA7NVF JA7ODY JA7OWB JA7OWD JA7OXR JA7OZW JA7QQQ JA7QVI JA7RIE JA7RPC JA7RQK JA7SSP JA7SUR JA7UES JA7VEI JA7WSC JA7WXL JA7XRH JA7YAA JA7YRR JA7ZFN JA8AJE JA8CEA JA8COE JA8CXY JA8DIV JA8DKJ JA8DNV JA8ECS JA8FFM JA8GAK JA8HBO JA8IDS JA8IJI JA8JTZ JA8KGG JA8KSF JA8KSW JA8KXA JA8LFI JA8LHN JA8NRS JA8NSF JA8RJD JA8RUZ JA8RWU JA8TRT JA8UON JA8VSG JA9BCV JA9BGL JA9BJS JA9BTA JA9CCG JA9CWJ JA9CXV JA9DOF JA9DTV JA9ECO JA9EJG JA9FFS JA9FHB JA9GEW JA9ILH JA9KBS JA9LJS JA9LNZ JA9MAT JA9NEG JA9NFO JA9NOF JA9OJM JA9PPC JA9RPU JA9RRH JA9SCB JA9TQY JA9XAT JA9YAA JD1BON JD1BQP JD1BQW JE0ANW JE0CBS JE0HUR JE0UXR JE0WCQ JE1AEX JE1AON JE1BJP JE1BMJ JE1CAC JE1CKA JE1CWQ JE1DXC JE1FQV JE1GLP JE1GUU JE1GWO JE1GZB JE1HMS JE1HRC JE1ICU JE1JAC JE1JBI JE1JNJ JE1LES JE1LFX JE1LOI JE1NGI JE1NVD JE1ORU JE1PMQ JE1QHP JE1RRK JE1RXJ JE1RZR JE1SLP JE1SPY JE1TSD JE1UPB JE1VMZ JE1WBA JE1WOY JE1XUZ JE2BOM JE2CPI JE2DJC JE2DOD JE2EVX JE2FJI JE2GUV JE2HCJ JE2HXL JE2KUC JE2LPC JE2LUN JE2OTM JE2PCY JE2PHJ JE2QHK JE2UFF JE2VYM JE2WDJ JE2YRB JE3AKU JE3AKV JE3DFY JE3ECD JE3EDJ JE3EZK JE3FOR JE3GNN JE3GUG JE3JSA JE3OUU JE3PTA JE3RMQ JE3VRJ JE4ADO JE4FNC JE4FTT JE4JPQ JE4MHL JE4URN JE4USZ JE4XCQ JE4YMO JE5DKA JE5HTN JE5JHZ JE6CMG JE6ETZ JE6JZP JE6KYA JE6LZN JE6MCA JE6NXH JE6OVK JE6OXU JE6PJP JE6PVG JE6QQN JE6RPM JE6TUP JE6WGT JE6WOQ JE7JDL JE7KHL JE7KJG JE7KTI JE7LHT JE7LYL JE7MAY JE7SRK JE7WBI JE8AGX JE8ATX JE8BJK JE8IAS JE8KGH JE8KKX JE8PHS JE8UHY JE8URC JE9PFD JF0CSK JF0IUN JF0RRH JF1AMX JF1AWC JF1CKO JF1DMY JF1DWJ JF1EFV JF1EGO JF1ELR JF1GZZ JF1HAJ JF1JDG JF1KMC JF1KML JF1KQI JF1LLB JF1LMB JF1LUC JF1MIA JF1MXQ JF1NHD JF1NZW JF1OJC JF1OPO JF1OQM JF1OVA JF1PEQ JF1PJK JF1ROR JF1RQD JF1RWZ JF1RYU JF1SQC JF1TEU JF1UMK JF1UOW JF1UOX JF1VAE JF1VHO JF1VNR JF1VVR JF1WAM JF1WLK JF1WNT JF2AIJ JF2BDK JF2BNG JF2CTS JF2FIU JF2KWM JF2MBF JF2NLH JF2OHQ JF2OZH JF2QNM JF2RCX JF2RVJ JF2SKV JF2UPM JF2VAX JF2WXS JF2XGF JF3BFS JF3DCH JF3EIG JF3GFH JF3IPR JF3IYW JF3KCH JF3KNW JF3KQA JF3LGC JF3LOP JF3NDW JF3NKA JF3PLF JF3PNQ JF3ROH JF3VAX JF4IET JF4UMY JF4XUT JF5JFV JF5SIM JF6ABL JF6AHC JF6CVW JF6CYD JF6EVR JF6KKC JF6MGC JF6YME JF7GDF JF7PHE JF7VVL JF8FAZ JF8QNF JF9EDN JF9IMW JF9JTS JF9QCX JF9QYV JF9SZE JG0AWE JG0EXP JG0GGI JG0SYA JG1AVR JG1BGT JG1BKX JG1BPS JG1CFO JG1CMT JG1CRM JG1DLY JG1EIQ JG1FMA JG1FML JG1GCO JG1GOY JG1IEF JG1ITH JG1KZL JG1LFR JG1LHB JG1LMK JG1LMT JG1LZY JG1OGM JG1RNK JG1RYQ JG1SRO JG1SXP JG1TCG JG1TGQ JG1TJA JG1TSG JG1TUC JG1TVK JG1UKW JG1UQD JG1WBB JG1WKM JG1XIO JG1ZUY JG2AIG JG2CNS JG2CNZ JG2DZM JG2FGD JG2GSY JG2KGS JG2KKG JG2LGM JG2MLI JG2NLN JG2NXV JG2PAZ JG2REJ JG2RFJ JG2TSL JG2VSF JG2XWH JG2ZZJ JG3CQJ JG3DHN JG3DOR JG3EIA JG3EWE JG3FEA JG3HLV JG3KIV JG3KMT JG3LDD JG3LGD JG3LLB JG3OYH JG3OZC JG3QBJ JG3RPL JG3UCV JG3UVN JG3VTR JG3WDN JG3XDR JG4AKL JG5DHX JG5UWK JG6JAV JG6MDS JG6OZC JG6QHE JG6VMO JG6XYS JG6YLY JG7AMD JG7MRR JG7QKY JG8JBX JG8NKJ JG8TDZ JH0AHI JH0BBE JH0BDK JH0BLI JH0CCK JH0DAY JH0DSY JH0EPI JH0FOG JH0GHZ JH0IGG JH0ILL JH0INP JH0JRL JH0KFI JH0KHR JH0MJY JH0MUC JH0MUE JH0MXV JH0NEC JH0NOS JH0OXS JH0RNN JH0SDA JH0TIS JH0UTC JH0UUY JH0VPO JH0WJE JH0WJF JH0WYT JH0ZHQ JH1ACA JH1AHU JH1APE JH1APK JH1APZ JH1ASG JH1BBT JH1BHW JH1BNC JH1CCN JH1CJQ JH1CML JH1CTV JH1DGJ JH1DJD JH1DLD JH1DWQ JH1EAQ JH1EIG JH1ERJ JH1EVD JH1EYM JH1FNU JH1FQW JH1FSF JH1FVE JH1GBO JH1GCR JH1GEX JH1GNU JH1GTU JH1HGI JH1HHP JH1HIC JH1HMC JH1HST JH1IVD JH1JCL JH1JJV JH1JNJ JH1KLE JH1KRC JH1KYA JH1KYI JH1LEM JH1LTP JH1MDJ JH1MTR JH1MZG JH1NBN JH1NCZ JH1NHY JH1NLF JH1NVA JH1NXU JH1OAI JH1OBS JH1OGC JH1OGT JH1OHZ JH1OJV JH1OLB JH1OVY JH1OXV JH1PVJ JH1PXH JH1QDB JH1RCA JH1RDU JH1RFM JH1RNI JH1RRP JH1SAJ JH1SAR JH1SBE JH1SBJ JH1SJN JH1SUU JH1TEB JH1TFE JH1TGZ JH1TJH JH1UBK JH1UES JH1USR JH1VHU JH1VIX JH1VMM JH1VOR JH1WFS JH1WHA JH1WHZ JH1WOY JH1XEF JH1XTC JH1XUM JH1XUP JH1XUZ JH1YMC JH2BTM JH2CMH JH2COZ JH2EUV JH2FXK JH2GZY JH2HIW JH2HUQ JH2JNU JH2KKW JH2LMH JH2MYN JH2NWP JH2NYZ JH2PWY JH2RIH JH2RMU JH2UNG JH2XQY JH3AGV JH3AIU JH3AXC JH3BYX JH3CUL JH3DJN JH3DMQ JH3EQP JH3FTZ JH3FUK JH3GCN JH3GMI JH3HCX JH3HYT JH3IEG JH3JSJ JH3JUB JH3LCU JH3LCX JH3MSA JH3PRR JH3QFY JH3RSH JH3SAZ JH3SIF JH3TBY JH4ADK JH4BTI JH4CES JH4CPC JH4DIT JH4EBG JH4FUF JH4GXR JH4HMG JH4HVL JH4IFF JH4LGA JH4MGU JH4MTE JH4NJQ JH4OHD JH4OYD JH4PUL JH4PUS JH4RHF JH4RUF JH4RUM JH4UTP JH4UYB JH5AVM JH5FTY JH5HDA JH5KAC JH5LUZ JH5MXB JH5OJH JH5YVC JH6AUS JH6DUI JH6EXF JH6GFY JH6IAG JH6JBQ JH6NBW JH6OPP JH6QFJ JH6QIL JH6RON JH6SCA JH6SHL JH6SKJ JH6TNH JH6WDG JH6WHN JH7BDS JH7BMF JH7CSU JH7CUO JH7DHL JH7GLT JH7GYG JH7IHT JH7IMX JH7IQQ JH7IXX JH7JUO JH7LRS JH7MQD JH7NXV JH7PIN JH7PIP JH7QXJ JH7RTQ JH7SSJ JH7TIX JH7UJU JH7VHZ JH7VTE JH7XGN JH7XMO JH7XVB JH7XWT JH7YJF JH8CLC JH8CXW JH8DBI JH8DBJ JH8DHV JH8FIH JH8GEU JH8IYN JH8KYU JH8RXM JH8SIT JH8SLS JH8VQT JH8XVH JH8XVT JH8YOH JH9AUB JH9BWC JH9CEN JH9DRL JH9FBU JH9FCP JH9ISY JH9LYC JH9RSC JH9RXV JH9URT JH9VUU JI0VIF JI0VWL JI0WVQ JI0XWS JI1ACI JI1AEP JI1ALP JI1AQY JI1AVY JI1BBN JI1BDQ JI1BHO JI1CAZ JI1CNA JI1CPN JI1DCW JI1DGW JI1FLB JI1FOE JI1FWH JI1FXS JI1HFJ JI1HNC JI1HSV JI1ICF JI1JPJ JI1LAI JI1LAT JI1LET JI1LNR JI1MUT JI1NIB JI1NZA JI1PBK JI1PUC JI1RFB JI1RSF JI1RXQ JI1SAI JI1TJJ JI1UPL JI1VAH JI2GZC JI2IXA JI2KUJ JI2KXK JI2MED JI2MWH JI2RVK JI2SIC JI2TKX JI2ZEY JI2ZJS JI3AES JI3BFC JI3CJP JI3CWI JI3DST JI3KDH JI3MJK JI3NOP JI3NST JI3VUB JI3XOM JI4JGD JI4WAO JI4WHS JI6BEN JI6NFX JI7EMD JI7GBI JI7NUF JI7OEA JI7OED JI7VNJ JJ0ACA JJ0CCZ JJ0IQS JJ0JML JJ0KRD JJ0NIP JJ0PJD JJ0PKS JJ0SFV JJ0THX JJ0TOL JJ0TUC JJ0TWX JJ0UIF JJ0USR JJ0VEX JJ0VFV JJ0VGD JJ0VNP JJ0VNR JJ0VXN JJ0WAJ JJ0WIE JJ0WNL JJ0WON JJ0XOZ JJ0XUN JJ0XYK JJ1AEB JJ1BDX JJ1CBY JJ1CZR JJ1DJW JJ1DPG JJ1EJX JJ1ENZ JJ1EPE JJ1FHR JJ1FXF JJ1HHJ JJ1HWL JJ1IGQ JJ1IMG JJ1IVX JJ1JPE JJ1JVC JJ1KZZ JJ1LBJ JJ1MBU JJ1NYH JJ1ONK JJ1PFC JJ1PZY JJ1QLT JJ1RDX JJ1RJR JJ1RXC JJ1RXH JJ1SLW JJ1SSY JJ1SVC JJ1TNX JJ1TQD JJ1TQM JJ1UBX JJ1VEZ JJ1VFA JJ1VFE JJ1VJB JJ1VJQ JJ1VRO JJ1WWL JJ1XAS JJ1XBQ JJ1XHB JJ1XNF JJ1XQU JJ1XTG JJ1YAF JJ2AVH JJ2CDL JJ2CJB JJ2HCM JJ2ICA JJ2JQF JJ2NWI JJ2ONH JJ2PIK JJ2QXI JJ2UKJ JJ2VLY JJ2YDV JJ2YKX JJ2YKZ JJ2YRE JJ2YRM JJ2YZS JJ3IUS JJ3JHP JJ3KTW JJ3QJI JJ3TBB JJ3YBB JJ4IOT JJ4NZO JJ5NFT JJ5RAX JJ5RBH JJ5RCX JJ6WYS JJ7JXO JJ7OIP JJ7PMS JK0AAU JK0ABQ JK0ABX JK1AIV JK1AKA JK1AKC JK1AUH JK1AUY JK1AXB JK1AXI JK1BAZ JK1BBD JK1BBO JK1BGV JK1BHG JK1BQC JK1BVN JK1BYI JK1CNL JK1DAS JK1DDG JK1DVP JK1DVU JK1ECX JK1EET JK1EJP JK1EOP JK1ESR JK1EVU JK1EXF JK1FDF JK1FNL JK1FUI JK1FUP JK1GKG JK1GPC JK1HBW JK1HFB JK1HIX JK1HIY JK1HZH JK1IXS JK1JAS JK1JGU JK1JHU JK1JJL JK1LPW JK1LSE JK1LUY JK1MBT JK1MLY JK1MZT JK1NIF JK1NJH JK1NJJ JK1NSR JK1NWD JK1OLT JK1OUD JK1PDC JK1PIG JK1PSQ JK1QDZ JK1QYL JK1RET JK1RFB JK1RSJ JK1RWO JK1SBP JK1SDH JK1SFP JK1TCV JK1UVL JK1VBA JK1VBK JK1VGN JK1VMC JK1VUZ JK1VXE JK1WKD JK1WSH JK1WZC JK1XAY JK1XDB JK1YMM JK1ZAM JK1ZIP JK2AQT JK2EIJ JK2KEK JK2RCP JK2VOC JK2XXK JK3DGX JK3GWT JK3HFN JK3HLP JK3NQV JK3NSD JK3OTH JK4HNN JK4JMO JK4KSD JK6DXD JK7CWL JK7DWD JK7LXU JK7UST JK8CEE JK8NIP JK8PBO JL1AGY JL1AQA JL1BFI JL1BTC JL1CNY JL1DLQ JL1DSA JL1EEI JL1EHU JL1ENC JL1EOH JL1EQX JL1EUF JL1EUP JL1EXY JL1FAR JL1FIC JL1GPG JL1GYY JL1HOV JL1IAO JL1IDK JL1IHF JL1ISE JL1ISK JL1JJD JL1KLK JL1LNC JL1LOF JL1MUT JL1MWI JL1MWY JL1MYP JL1NIE JL1OOD JL1QDO JL1QOC JL1QQA JL1RSH JL1SAM JL1UTS JL1UXH JL1VFZ JL1WRV JL2OGZ JL2TAW JL2XKK JL2XMW JL3AYP JL3DQX JL3JRY JL3MCM JL3OXR JL3RDC JL3RNZ JL3VUL JL3YSX JL3ZHU JL3ZLI JL4DJM JL4OUX JL6USD JL7BWM JL7GGH JL7IPY JL7UWQ JL8PZO JM1BNF JM1DPL JM1EKM JM1EMX JM1FHL JM1GHT JM1IIF JM1IKW JM1IPX JM1IQX JM1KNI JM1LAW JM1LDV JM1LFA JM1LPN JM1LQI JM1LRA JM1LRQ JM1MOM JM1MTE JM1NKT JM1NZJ JM1OAX JM1OFJ JM1PIH JM1SMY JM1SZY JM1TAL JM1TQH JM1UTT JM1VDM JM1VNJ JM1XBD JM1XCW JM2LEI JM2LHB JM2NYR JM2RUV JM3ATN JM3FUW JM3QIS JM3ROY JM3UGA JM4MGM JM4WUZ JM6NVD JM6URL JM7GTK JM7OLW JM7SKE JM8FEI JM8GJB JM8LND JM8ONP JM8PSY JM8QGN JM8RWJ JM8SCH JM8SEI JM8SMO JM8UJU JM8VFO JN1BMX JN1CNJ JN1DNV JN1ECL JN1FAO JN1GFR JN1GNL JN1HYU JN1IFX JN1ILK JN1JYD JN1KMI JN1KWR JN1MSO JN1NBU JN1NDY JN1NOP JN1RKE JN1RVS JN1SUT JN1THL JN1TVW JN1VFV JN1XQS JN2AMD JN2GPQ JN2QCV JN3DMJ JN3DSH JN3GYJ JN3MXT JN3SAC JN3TMW JN4ESD JN4MMO JN6FRH JN6OOZ JN7FAH JN7TAN JO1ABS JO1AEC JO1ATK JO1CRA JO1DII JO1KTD JO1PZR JO1QNO JO1RUQ JO1SIM JO1VRK JO1VRV JO1VVT JO1WIZ JO1WQS JO1WXO JO1YRM JO1ZRX JO2XYK JO3DDD JO3JYE JO3OEF JO3TND JO3VVO JO3XCK JO3XPH JO4CFV JO4FER JO4GFZ JO4JFH JO4JKL JO4MJU JO4MTH JO4NVD JO6NZN JO7GVC JO7KMB JO7VVK JP1BBP JP1EHC JP1EWY JP1GUW JP1IXV JP1JFG JP1JZR JP1KLR JP1LRT JP1NNF JP1QDH JP1SCQ JP1SRG JP1TRJ JP2XSP JP2XYT JP3AQR JP3AZM JP3EXR JP3FTA JP3JUV JP3KPJ JP3LNM JP3MFV JP3MYJ JP3REM JP3SDA JP3UBR JP3WEL JP3XHV JP7BRB JP7DKQ JP7NOW JP7PQF JP7SOZ JP7TIT JP7VFW JP7XDO JP7XJT JQ1ABC JQ1ARQ JQ1BVI JQ1CIV JQ1COB JQ1CTT JQ1GLJ JQ1HYB JQ1IBJ JQ1NGT JQ1PCT JQ1QKK JQ1TAR JQ1TIV JQ1UCG JQ1VDJ JQ1YUF JQ2NUD JQ2OUL JQ2XVY JQ3ALW JQ3AWC JQ3BAV JQ3BPQ JQ3BVC JQ3CYL JQ3DES JQ3DEW JQ3DXA JQ3DYV JQ3EGN JQ3GQI JQ3ICB JQ3IKN JQ3IXG JQ3JSR JQ3JWF JQ3KWI JQ3KWM JQ7AXT JQ7EBU JQ7EUW JR0AUC JR0BNF JR0BQD JR0DLU JR0DZH JR0ECQ JR0ELG JR0ETA JR0GFM JR0GXA JR0QFA JR0RBY JR0SYV JR0WFY JR0WZR JR0ZBZ JR1ABS JR1AIA JR1AIB JR1AKD JR1AQI JR1ATA JR1BAS JR1BFZ JR1CAD JR1CBC JR1DUP JR1DVB JR1EMO JR1GSE JR1IJV JR1JCB JR1JRW JR1LEV JR1LLD JR1LQK JR1LWS JR1LZK JR1MEG JR1MQT JR1MRG JR1NHD JR1NKN JR1NWV JR1QBA JR1QKF JR1TCY JR1UFN JR1UJX JR1UMO JR1USU JR1WYW JR1YRI JR1ZTI JR1ZTT JR2ALA JR2ATZ JR2AWS JR2BCF JR2BYJ JR2DWA JR2EKD JR2FJC JR2GBY JR2GRX JR2IGV JR2IOB JR2KHB JR2KQE JR2LBF JR2MIN JR2NMJ JR2NTC JR2PAU JR2PMT JR2PZX JR2SCJ JR2TMB JR2TRC JR2UBS JR2UQU JR2VFJ JR2WER JR2WLQ JR3AAZ JR3BOT JR3BVX JR3EOI JR3EPI JR3EXE JR3GPP JR3HZW JR3IIR JR3JFZ JR3JRI JR3KAH JR3KQJ JR3KSL JR3NDM JR3NZC JR3PCW JR3QHQ JR3QLI JR3RIU JR3RIY JR3RWB JR3UIC JR3XEX JR3XOP JR4AHX JR4BCD JR4CTF JR4DAH JR4DSM JR4FLW JR4GPA JR4HCQ JR4INQ JR4LRY JR4NMV JR4OZR JR4PDP JR4PUR JR4VEV JR4VFC JR4WKV JR5CAG JR5JAQ JR5JEU JR5XPG JR6CSY JR6EZE JR6HMJ JR6IKD JR6IQI JR6KBF JR6QXL JR6RMV JR6YAA JR7ANB JR7AQL JR7ASO JR7BVQ JR7FEK JR7HAN JR7IFV JR7IWC JR7IWL JR7NFW JR7REE JR8AMF JR8NOD JR8ORC JR8QFG JR8VSE JR8WOW JR9CPT JR9GMS JR9PYU JS1AAF JS1BIB JS1BXH JS1DEH JS1IFK JS1KKY JS1KQQ JS1LQI JS1MRM JS1NDM JS1OYN JS1PDC JS1WWR JS1YDX JS1YLQ JS1YRN JS2AZO JS2BGJ JS2EEF JS2EHU JS2IMR JS2ITI JS2IWE JS2JAQ JS2KFN JS2KWL JS2KZM JS2MKU JS2MYR JS2NYJ JS2PHO JS2QWH JS2RLB JS2RMU JS2RUF JS2SQS JS3CGH JS3CTQ JS3EOE JS6RRR JS6RTJ JS6SRY JS6TSE JS6UMO JS6UXM'.split(' ');
+  var CALLS_7 = '7K1BZM 7K1CPT 7K1EQG 7K1III 7K1JFM 7K1MAG 7K1NUZ 7K1PTT 7K1PYG 7K1SLY 7K1VKU 7K2PZG 7K2VNA 7K3LGC 7K4AEA 7K4GUR 7K4PTY 7K4TKB 7K4VPV 7K4XNN 7L1CDK 7L1DST 7L1ETP 7L1FFH 7L1FPU 7L1QCJ 7L2ATG 7L2OHM 7L2VPL 7L3ETZ 7L3JAR 7L3KJV 7L3SQL 7L3WNX 7L3WVU 7L4IOU 7L4MDM 7L4OLF 7L4SCQ 7L4VYK 7M1MCY 7M2ALZ 7M2FTR 7M2UHF 7M3LDC 7M4AOE 7M4BEN 7M4CLF 7M4CTM 7M4OAQ 7N2GKJ 7N2GTR 7N2HJY 7N2JLJ 7N2JZT 7N2SPK 7N2TNI 7N2TRM 7N2UQC 7N3WRE 7N4SJX 7N4WPY 7N4XIF 7N4XTA'.split(' ');
+  var CALLS4_J = CALLS_J.filter(function(c){ return c.charAt(2) === '4'; });
+  var CALLS4_7 = CALLS_7.filter(function(c){ return c.charAt(2) === '4'; });
+  function callsign6(){
+    return Math.random() < 0.9 ? pick(CALLS_J) : pick(CALLS_7);
+  }
+  // JARL 全市全郡コンテストで送る市郡区ナンバー（JARL市・郡・区リストの現行分。政令指定都市は区ナンバー）
+  var ACAG_NUMBERS = '0102 0103 0104 0105 0106 0107 0108 0109 0110 0111 0112 0113 0114 0115 0116 0117 0118 0119 0120 0121 0122 0123 0124 0125 0126 0127 0128 0129 0130 0131 0133 0134 0135 0136 0201 0202 0203 0204 0205 0206 0207 0208 0209 0210 0301 0302 0303 0304 0305 0307 0308 0309 0310 0311 0313 0314 0315 0316 0401 0402 0403 0404 0406 0407 0409 0410 0411 0412 0413 0414 0415 0501 0502 0503 0504 0505 0506 0507 0508 0509 0510 0511 0512 0513 0602 0603 0605 0606 0607 0608 0609 0611 0612 0613 0614 0615 0616 0701 0702 0703 0705 0707 0708 0711 0714 0715 0717 0718 0719 0720 0802 0804 0805 0806 0808 0809 0810 0811 0812 0813 0816 0818 0822 0823 0824 0825 0826 0827 0828 0901 0902 0903 0904 0905 0906 0907 0908 0909 0910 0911 0912 0913 0914 0915 0918 0919 0920 0921 100101 100102 100103 100104 100105 100106 100107 100108 100109 100110 100111 100112 100113 100114 100115 100116 100117 100118 100119 100120 100121 100122 100123 1002 1003 1004 1005 1006 1007 1008 1009 1010 1011 1012 1013 1014 1015 1016 1019 1020 1021 1022 1023 1024 1025 1026 1028 1029 1030 1102 1104 1105 1106 1107 1108 1109 1111 1112 1113 1114 1115 1116 1117 1118 1119 1202 1203 1204 1205 1206 1207 1208 1210 1211 1212 1213 1215 1216 1217 1218 1219 1220 1221 1222 1223 1224 1225 1226 1227 1228 1229 1230 1231 1232 1233 1234 1235 1236 1237 1238 1239 1302 1303 1304 1306 1307 1308 1309 1310 1311 1312 1314 1315 1316 1317 1318 1319 1321 1322 1323 1324 1325 1327 1328 1329 1330 1331 1332 1333 1334 1336 1337 1338 1339 1340 1341 1342 1343 1345 1346 1401 1402 1403 1404 1405 1407 1408 1410 1412 1414 1415 1416 1417 1419 1420 1421 1422 1423 1424 1425 1426 1427 1428 1429 1430 1431 1432 1433 1434 1435 1436 1437 1501 1502 1503 1504 1505 1506 1508 1509 1510 1511 1513 1514 1515 1516 1601 1602 1603 1604 1605 1606 1607 1608 1609 1610 1611 1612 1701 1702 1704 1705 1706 1707 1708 1709 1710 1711 1712 1713 1714 1803 1805 1806 1807 1808 1809 1811 1812 1813 1814 1815 1816 1817 1820 1821 1822 1823 1824 1825 1826 1827 1901 1902 1903 1904 1905 1906 1907 1908 1909 1910 1911 1912 1913 1914 1915 1916 1917 1918 1919 1920 1921 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2019 2021 2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2101 2102 2103 2104 2105 2107 2108 2109 2110 2111 2112 2115 2116 2117 2202 2203 2204 2205 2206 2207 2208 2209 2210 2211 2212 2213 2214 2215 2301 2302 2303 2304 2306 2307 2308 2309 2310 2311 2312 2313 2314 2401 2402 2403 2404 2405 2406 2407 2408 2409 2410 2411 2412 2503 2504 2506 2507 2508 2509 2510 2511 2512 2513 2514 2515 2516 2517 2518 2521 2522 2523 2524 2525 2526 2527 2528 2529 2530 2531 2532 2533 2534 2535 2536 2601 2602 2603 2604 2605 2606 2607 2608 2609 2702 2703 2704 2705 2706 2707 2708 2709 2710 2711 2713 2714 2715 2716 2717 2718 2719 2720 2721 2723 2724 2725 2726 2727 2728 2729 2730 2731 2801 2802 2804 2805 2806 2807 2808 2809 2810 2811 2901 2902 2904 2905 2906 2907 2908 2909 2910 3001 3002 3003 3004 3005 3006 3007 3009 3010 3011 3012 3102 3103 3104 3107 3109 3110 3111 3112 3113 3114 3115 3116 3117 3118 3201 3202 3203 3204 3205 3206 3207 3209 3301 3302 3303 3304 3306 3307 3308 3310 3311 3312 3313 3315 3316 3401 3402 3403 3404 3502 3503 3504 3505 3508 3509 3510 3511 3512 3513 3514 3515 3516 3601 3602 3603 3604 3605 3606 3607 3608 3701 3702 3703 3704 3705 3706 3707 3708 3801 3802 3803 3804 3805 3806 3807 3810 3813 3814 3815 3901 3902 3903 3904 3905 3907 3908 3909 3910 3911 3912 4007 4008 4009 4010 4011 4012 4015 4016 4017 4018 4019 4020 4022 4023 4024 4025 4026 4027 4029 4030 4031 4032 4033 4034 4035 4036 4037 4101 4102 4103 4104 4105 4106 4107 4108 4109 4110 4201 4202 4203 4204 4205 4207 4208 4209 4210 4211 4212 4213 4214 4302 4303 4304 4305 4306 4308 4310 4311 4312 4313 4314 4315 4316 4401 4402 4403 4404 4405 4406 4407 4408 4410 4411 4412 4413 4414 4415 4501 4502 4503 4504 4505 4506 4507 4508 4509 4601 4603 4604 4606 4607 4610 4614 4615 4616 4617 4618 4619 4620 4621 4622 4623 4624 4625 4626 4701 4704 4706 4708 4709 4710 4711 4712 4713 4714 4715 010101 010102 010103 010104 010105 010106 010107 010108 010109 010110 060101 060102 060103 060104 060105 080101 080102 080103 080104 080105 080106 080107 080108 110101 110102 110103 110104 110105 110106 110107 110108 110109 110110 110111 110112 110113 110114 110115 110116 110117 110118 110301 110302 110303 110304 110305 110306 110307 111001 111002 111003 120101 120102 120103 120104 120105 120106 134401 134402 134403 134404 134405 134406 134407 134408 134409 134410 180101 180102 180103 180207 180208 180209 200101 200102 200103 200104 200105 200106 200107 200108 200109 200110 200111 200112 200113 200114 200115 200116 220101 220102 220103 220104 220105 220106 220107 220108 220109 220110 220111 250101 250102 250103 250104 250106 250107 250108 250109 250111 250113 250114 250115 250116 250117 250118 250119 250120 250121 250122 250123 250124 250125 250126 250127 250201 250202 250203 250204 250205 250206 250207 270101 270102 270103 270104 270105 270106 270107 270108 270109 310101 310102 310103 310104 350101 350102 350103 350104 350105 350106 350107 350108 400101 400102 400103 400104 400105 400106 400107 402101 402102 402103 402104 402105 402106 402107 430101 430102 430103 430104 430105 01001 01002 01003 01005 01006 01007 01008 01009 01010 01011 01013 01014 01015 01016 01018 01019 01020 01021 01022 01023 01024 01025 01026 01027 01028 01030 01031 01033 01034 01035 01036 01037 01038 01039 01040 01041 01042 01043 01045 01046 01047 01048 01049 01050 01051 01052 01053 01055 01059 01060 01062 01063 01064 01066 01067 01069 01070 01071 01072 01073 01074 01075 01076 01077 01078 01079 01080 01081 02001 02002 02003 02004 02005 02006 02007 02008 03001 03002 03004 03005 03006 03007 03008 03009 03010 03013 04001 04002 04004 04005 04007 04008 05001 05002 05003 05005 05006 05007 05008 05011 06001 06002 06003 06004 06006 06008 06010 06013 06014 06016 07002 07003 07005 07006 07007 07010 07011 07012 07013 07014 07015 07016 07017 08001 08002 08004 08007 08008 08011 08013 08015 08016 09001 09002 09003 09004 09005 09006 09008 09009 09010 09011 09012 09014 09015 09017 10002 10004 10005 10006 10007 11001 11002 11003 11004 11006 11007 12001 12002 12004 12006 12008 12011 13001 13002 13003 13004 13006 13007 13008 13009 14001 14003 14004 14005 14008 14012 14014 15004 15005 15006 15007 15008 16001 16003 16004 16005 16007 16009 16010 17002 17003 17004 17007 17008 18006 18008 18009 18010 18011 19001 19003 19005 19007 19008 19011 19012 19015 19017 20001 20003 20004 20005 20007 20009 20010 21006 21008 21009 21012 21014 21015 21016 22003 22006 22008 22010 22012 22014 23002 23003 23004 24001 24002 24004 24005 24007 24009 24010 25002 25003 25004 25006 25007 26001 26002 26003 26005 26006 26007 27001 27005 27007 27010 27011 27013 27016 27020 28003 28004 29002 29003 29008 29009 29010 29011 29012 30003 30004 30006 30007 30009 31001 31003 31006 31007 31010 31015 31016 31017 31019 31020 32003 32004 32006 32008 32012 33002 33003 33005 33006 34001 34003 34004 34005 34006 35001 35007 35008 35010 35016 36001 36003 36004 36005 36006 37002 37004 37005 37006 37007 37008 37009 37010 38001 38003 38005 38006 38007 38010 38012 39001 39002 39004 39005 39006 39007 40001 40004 40005 40006 40007 40009 40011 40012 40014 40015 40018 41002 41003 41005 41006 41007 41008 42004 42006 42007 42009 43001 43002 43003 43005 43007 43008 43009 43010 43012 44005 44009 44010 45001 45002 45003 45004 45005 45006 46001 46003 46005 46006 46008 46009 46010 46011 47001 47002 47003 47004 47005'.split(' ');
+  // 都府県・地域等ナンバー（ALL JA / 6m AND DOWN / FD 1.9〜1200MHz / オール岡山県外）
+  var PREF_REGION_ALL = [];
+  (function(){ for(var i=2;i<=47;i++) PREF_REGION_ALL.push(('0'+i).slice(-2)); for(var j=101;j<=114;j++) PREF_REGION_ALL.push(String(j)); PREF_REGION_ALL.push('48'); })();
+  // コールサインのエリア数字 → そのエリアの都府県・地域等ナンバー
+  var AREA_PREFS = {
+    1:['10','11','12','13','14','15','16','17'], 2:['18','19','20','21'], 3:['22','23','24','25','26','27'],
+    4:['31','32','33','34','35'], 5:['36','37','38','39'], 6:['40','41','42','43','44','45','46','47'],
+    7:['02','03','04','05','06','07'], 8:['101','102','103','104','105','106','107','108','109','110','111','112','113','114'],
+    9:['28','29','30'], 0:['08','09']
+  };
+  // エリア → 市郡区ナンバー（先頭2桁が都府県コード。北海道は01）
+  var ACAG_BY_AREA = {};
+  Object.keys(AREA_PREFS).forEach(function(a){
+    var codes = a === '8' ? ['01'] : AREA_PREFS[a];
+    ACAG_BY_AREA[a] = ACAG_NUMBERS.filter(function(n){ return codes.indexOf(n.slice(0,2)) >= 0; });
+  });
+  // オール岡山: 岡山県外は都府県・地域等ナンバー、岡山県内は市区郡ナンバー
+  var OKAYAMA_IN = ACAG_NUMBERS.filter(function(n){ return n.slice(0,2) === '31'; });
+  var OKAYAMA_OUT = PREF_REGION_ALL.filter(function(n){ return n !== '31'; });
+  var OKAYAMA_NUMBERS = OKAYAMA_OUT.concat(OKAYAMA_IN);
+  var CONTESTS = {
+    allja:   { label:'ALL JA/6m AND DOWN', power:'HMLP', ex:'25H', cex:'31M' },
+    fd:      { label:'FD',                 power:'MLP',  ex:'25M', cex:'31M', ccall:'JR4ZUZ/4' },
+    okayama: { label:'オール岡山',          power:'',     ex:'3102', cex:'3110' },
+    acag:    { label:'全市全郡',            power:'HMLP', ex:'1002M', cex:'3110M' }
+  };
+  // コンテストナンバー（5NNの後ろの部分）。call を渡すとその局として実際にあり得る番号にする
+  function areaOf(call){
+    var parts = call.split('/');
+    return parts[1] ? parts[1] : call.charAt(2);
+  }
+  function contestExchange(key, call){
+    var area = call ? areaOf(call) : null, num;
+    if(key === 'acag'){
+      num = area !== null ? pick(ACAG_BY_AREA[area]) : pick(ACAG_NUMBERS);
+    } else if(key === 'okayama'){
+      if(area === null) num = pick(OKAYAMA_NUMBERS);
+      else if(area === '4' && Math.random() < 0.6) num = pick(OKAYAMA_IN);
+      else num = pick(AREA_PREFS[area].filter(function(n){ return n !== '31'; }));
+    } else {
+      num = area !== null ? pick(AREA_PREFS[area]) : pick(PREF_REGION_ALL);
+    }
+    var pw = CONTESTS[key].power;
+    return num + (pw ? pick(pw.split('')) : '');
+  }
+  function withPower(key, num){
+    var pw = CONTESTS[key].power;
+    return num + (pw ? pick(pw.split('')) : '');
+  }
+  // コンテストモード用: 実際にあり得るコールサインとナンバーの組
+  function contestPair(key){
+    var call, rr = Math.random();
+    if(key === 'fd'){
+      call = rr < 0.8 ? callsign8() : callsign6();          // FDは移動運用8割
+      return { call:call, num:contestExchange('fd', call) };
+    }
+    if(key === 'okayama'){
+      if(rr < 0.5){                                        // 県内局（4エリアの局が岡山県内で運用）
+        call = Math.random() < 0.9 || !CALLS4_7.length ? pick(CALLS4_J) : pick(CALLS4_7);
+        return { call:call, num:withPower(key, pick(OKAYAMA_IN)) };
+      }
+      if(rr < 0.8){                                        // 県外局（地元で運用）
+        call = callsign6();
+        var prefs = AREA_PREFS[call.charAt(2)].filter(function(n){ return n !== '31'; });
+        return { call:call, num:withPower(key, pick(prefs)) };
+      }
+      do { call = callsign6(); } while(call.charAt(2) === '4');   // 県外局が岡山県内で移動運用
+      return { call:call + '/4', num:withPower(key, pick(OKAYAMA_IN)) };
+    }
+    call = callsign6();
+    return { call:call, num:contestExchange(key, call) };
+  }
+  var PRACTICE_CONTEST = { contest:'allja', contest_fd:'fd', contest_okayama:'okayama', contest_acag:'acag' };
+  function callsign8(){ return callsign6() + '/' + rand(10); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+  function $(id){ return document.getElementById(id); }
+
+  // ---------- storage ----------
+  function loadJSON(key, fallback){
+    try{ var raw = localStorage.getItem(key); if(!raw) return fallback; return JSON.parse(raw); }catch(e){ return fallback; }
+  }
+  function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+  var DEFAULT_SETTINGS = { charset:'words', groupLen:2, wc:20, wf:14, vol:60, mode:'practice', name:'' };
+  var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('cwtrainer.settings', {}));
+  var stats = Object.assign({ rounds:0, correct:0, streak:0, best:0 }, loadJSON('cwtrainer.stats', {}));
+  var highscores = loadJSON('cwtrainer.highscores', []);
+  if(!Array.isArray(highscores)) highscores = [];
+
+  // ---------- elements ----------
+  var els = {};
+  ['tabPractice','tabAttack','practicePanel','attackPanel','statsPanel','hsPanel','practiceSettings',
+   'playStatus','playBtn','pReplayBtn','nextBtn','checkBtn','guessInput','feedback','fbGuess','fbAnswer','fbMorse','fbVerdict',
+   'charsetSel','groupLenField','groupLen','groupLenVal','groupLenLabelText','groupLenNote',
+   'wcRange','wcVal','wfRange','wfVal','volRange','volVal','speedLockNote',
+   'statRounds','statCorrect','statAcc','statStreak','statBest','resetStatsBtn','logList','refGrid',
+   'atkIdle','atkHeading','atkMode','atkContest','atkContestField','atkModeDesc','atkTiers','hsTitle','atkRun','atkResult','playerName','atkStartBtn','atkTime','atkScore','atkLevel','atkLevelSub',
+   'atkBarWrap','atkBar','atkStatus','atkInput','atkFeedback','atkPauseBtn','atkReplayBtn','atkMuteBtn','atkQuitBtn',
+   'resScore','resBadge','resLast','resHistory','atkRetryBtn','atkBackBtn',
+   'hsBody','hsEmpty','hsClearBtn','modal','modalMsg','modalOk','modalCancel'
+  ].forEach(function(id){ els[id] = $(id); });
+
+  // ---------- settings UI ----------
+  function refreshLabels(){
+    els.groupLenVal.textContent = els.groupLen.disabled ? '' : els.groupLen.value;
+    els.wcVal.textContent = els.wcRange.value;
+    els.wfVal.textContent = els.wfRange.value;
+    els.volVal.textContent = els.volRange.value;
+  }
+  function persistSettings(){
+    settings.charset = els.charsetSel.value;
+    settings.groupLen = +els.groupLen.value;
+    settings.wc = +els.wcRange.value;
+    settings.wf = +els.wfRange.value;
+    settings.vol = +els.volRange.value;
+    settings.name = els.playerName.value.trim();
+    settings.atkMode = els.atkMode.value;
+    settings.atkContest = els.atkContest.value;
+    saveJSON('cwtrainer.settings', settings);
+  }
+  function isWordMode(cs){ return cs === 'words' || cs === 'qcodes'; }
+  function refreshGroupLenMode(){
+    var cs = els.charsetSel.value;
+    if(cs.indexOf('callsign') === 0 || cs.indexOf('contest') === 0){
+      els.groupLen.disabled = true;
+      els.groupLenField.hidden = true;
+      els.groupLenLabelText.textContent = '文字数';
+      els.groupLenNote.textContent = cs === 'contest'
+        ? '「5NN 25H」の形式で出題されます。5NNに続くナンバー部分（例: 25H）を入力してください。'
+        : cs === 'contest_fd'
+        ? '「5NN 25M」の形式で出題されます（1.9〜1200MHz帯のナンバー、出力はM・L・P）。5NNに続く部分（例: 25M）を入力してください。'
+        : cs === 'contest_okayama'
+        ? '「5NN 3102」の形式で出題されます。5NNに続くナンバー（例: 3102、13、104）を入力してください。'
+        : cs === 'contest_acag'
+        ? '「5NN 1002M」の形式で出題されます。5NNに続く市郡区ナンバーと出力（例: 1002M）を入力してください。'
+        : 'コールサインは1件ずつ出題されます。';
+    } else if(isWordMode(cs)){
+      els.groupLen.disabled = false;
+      els.groupLenField.hidden = false;
+      els.groupLen.max = 3;
+      if(+els.groupLen.value > 3) els.groupLen.value = 3;
+      els.groupLenLabelText.textContent = '単語数';
+      els.groupLenNote.textContent = '';
+    } else {
+      els.groupLen.disabled = false;
+      els.groupLenField.hidden = false;
+      els.groupLen.max = 8;
+      els.groupLenLabelText.textContent = '文字数';
+      els.groupLenNote.textContent = '';
+    }
+    els.groupLenNote.hidden = !els.groupLenNote.textContent;
+    refreshLabels();
+  }
+  function applySettingsToUI(){
+    els.charsetSel.value = settings.charset;
+    els.groupLen.max = 8;
+    els.groupLen.value = settings.groupLen;
+    els.wcRange.value = settings.wc;
+    els.wfRange.max = settings.wc;
+    els.wfRange.value = Math.min(settings.wf, settings.wc);
+    els.volRange.value = settings.vol;
+    els.playerName.value = settings.name || '';
+    if(settings.atkMode) els.atkMode.value = settings.atkMode;
+    if(settings.atkContest) els.atkContest.value = settings.atkContest;
+    refreshGroupLenMode();
+  }
+
+  // ---------- Morse timing ----------
+  function computeTiming(){
+    var wc = +els.wcRange.value;
+    var wf = Math.min(+els.wfRange.value, wc);
+    var ta = 1.2 / wc;
+    var extra = Math.max(0, 60/wf - 60/wc);
+    var tflc = extra / 19;
+    return { dit:ta, dah:3*ta, intraGap:ta, charGap:3*(ta+tflc), wordGap:7*(ta+tflc) };
+  }
+  function buildSegments(text, timing){
+    var segs = [];
+    var words = text.trim().split(/\s+/).filter(Boolean);
+    words.forEach(function(word, wi){
+      for(var ci=0; ci<word.length; ci++){
+        var pattern = MORSE[word[ci].toUpperCase()];
+        if(!pattern) continue;
+        for(var ei=0; ei<pattern.length; ei++){
+          segs.push({ tone:true, dur: pattern[ei]==='.' ? timing.dit : timing.dah });
+          if(ei < pattern.length-1) segs.push({ tone:false, dur:timing.intraGap });
+        }
+        if(ci < word.length-1) segs.push({ tone:false, dur:timing.charGap });
+      }
+      if(wi < words.length-1) segs.push({ tone:false, dur:timing.wordGap });
+    });
+    return segs;
+  }
+
+  // ---------- Audio engine ----------
+  var audioCtx = null, masterGain = null, muted = false;
+  var player = { osc:null, timer:null, token:0 };
+
+  function ensureAudioCtx(){
+    if(!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.connect(audioCtx.destination);
+      applyVolume();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function applyVolume(){
+    if(!masterGain) return;
+    var v = muted ? 0 : (+els.volRange.value)/100;
+    masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  }
+  function stopAudio(){
+    player.token++;
+    clearTimeout(player.timer);
+    player.timer = null;
+    if(player.osc){
+      try{ player.osc.onended = null; player.osc.stop(); }catch(e){}
+      player.osc = null;
+    }
+    onPracticePlayEnd();
+  }
+  // plays text once; cb fires when finished (unless stopped)
+  function playOnce(text, cb){
+    var ctx = ensureAudioCtx();
+    var myToken = player.token;
+    var timing = computeTiming();
+    var segs = buildSegments(text, timing);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = TONE_FREQ;
+    osc.connect(gain); gain.connect(masterGain);
+    var peak = 0.35, ramp = 0.004;
+    var start = ctx.currentTime + 0.05, t = start;
+    gain.gain.setValueAtTime(0, start);
+    segs.forEach(function(seg){
+      if(seg.tone){
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(peak, t+ramp);
+        gain.gain.setValueAtTime(peak, Math.max(t+ramp, t+seg.dur-ramp));
+        gain.gain.linearRampToValueAtTime(0, t+seg.dur);
+      }
+      t += seg.dur;
+    });
+    osc.start(start);
+    osc.stop(t + 0.02);
+    player.osc = osc;
+    osc.onended = function(){
+      if(player.osc === osc) player.osc = null;
+      if(myToken === player.token && cb) cb(timing);
+    };
+  }
+  // plays text repeatedly with a separating gap until stopAudio()
+  function playLoop(text, delayMs){
+    stopAudio();
+    var myToken = player.token;
+    function once(){
+      playOnce(text, function(timing){
+        if(myToken !== player.token) return;
+        var gapMs = timing.wordGap * 2 * 1000;
+        player.timer = setTimeout(function(){ if(myToken === player.token) once(); }, gapMs);
+      });
+    }
+    if(delayMs > 0){ player.timer = setTimeout(function(){ if(myToken === player.token) once(); }, delayMs); }
+    else once();
+  }
+
+  // ---------- Modal ----------
+  var modalHandlers = null;
+  function confirmDialog(msg, okLabel, onOk, onCancel){
+    els.modalMsg.textContent = msg;
+    els.modalOk.textContent = okLabel;
+    modalHandlers = { ok:onOk, cancel:onCancel };
+    els.modal.hidden = false;
+    els.modalCancel.focus();
+  }
+  function closeModal(which){
+    els.modal.hidden = true;
+    var h = modalHandlers; modalHandlers = null;
+    if(h && h[which]) h[which]();
+  }
+  els.modalOk.addEventListener('click', function(){ closeModal('ok'); });
+  els.modalCancel.addEventListener('click', function(){ closeModal('cancel'); });
+  els.modal.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal('cancel'); });
+
+  // ---------- Practice mode ----------
+  var practiceAnswer = '', roundDone = false, practicePlaying = false;
+
+  function onPracticePlayEnd(){
+    if(!practicePlaying) return;
+    setPracticePlaying(false);
+  }
+  function setPracticePlaying(on, status){
+    practicePlaying = on;
+    els.playBtn.textContent = on ? '⏸ 一時停止' : '▶ 再生する';
+    els.playStatus.textContent = status || (on ? '🔊 繰り返し再生中…' : '待機中');
+  }
+  function practiceGenerate(){
+    var cs = els.charsetSel.value, n = +els.groupLen.value;
+    switch(cs){
+      case 'letters': return randChars(LETTERS, n);
+      case 'digits': return randChars(DIGITS, n);
+      case 'alnum': return randChars(LETTERS+DIGITS, n);
+      case 'words': return randWords(WORDS, Math.max(1,n));
+      case 'qcodes': return randWords(QCODES, Math.max(1,n));
+      case 'callsign': return callsign6();
+      case 'callsign_p': return callsign8();
+      case 'callsign_mix': return Math.random() < 0.5 ? callsign6() : callsign8();
+      case 'contest': case 'contest_fd': case 'contest_okayama': case 'contest_acag':
+        return '5NN ' + contestExchange(PRACTICE_CONTEST[cs]);
+    }
+    return randChars(LETTERS, 5);
+  }
+  function practicePlay(){
+    if(practicePlaying || !practiceAnswer) return;
+    playLoop(practiceAnswer);
+    setPracticePlaying(true);
+  }
+  function practiceReplay(){
+    if(!practiceAnswer) return;
+    playLoop(practiceAnswer);
+    setPracticePlaying(true);
+    els.guessInput.focus();
+  }
+  function practicePause(){
+    if(!practicePlaying) return;
+    stopAudio();
+    setPracticePlaying(false, '⏸ 一時停止中');
+  }
+  function practiceNewRound(){
+    stopAudio();
+    practiceAnswer = practiceGenerate();
+    els.guessInput.value = '';
+    els.feedback.hidden = true;
+    roundDone = false;
+    els.checkBtn.disabled = false;
+    els.nextBtn.disabled = true;
+    els.playStatus.textContent = '待機中';
+  }
+  function normalize(raw, wordMode){
+    var v = raw.trim().toUpperCase();
+    return wordMode ? v.replace(/\s+/g,' ') : v.replace(/\s+/g,'');
+  }
+  function renderDiff(guess, answer){
+    var html = '';
+    for(var i=0;i<guess.length;i++){
+      html += '<span class="'+(guess[i]===answer[i]?'ok':'bad')+'">'+escapeHtml(guess[i])+'</span>';
+    }
+    return html || '<span class="bad">(未入力)</span>';
+  }
+  function morseHtml(text){
+    return text.split(' ').map(function(word){
+      return word.split('').map(function(ch){ var p = MORSE[ch]; return p ? '<span class="mc">' + pretty(p) + '</span>' : escapeHtml(ch); }).join(' / ');
+    }).join('&nbsp;&nbsp;|&nbsp;&nbsp;');
+  }
+  function updateStatsUI(){
+    els.statRounds.textContent = stats.rounds;
+    els.statCorrect.textContent = stats.correct;
+    els.statAcc.textContent = stats.rounds ? Math.round(stats.correct/stats.rounds*100)+'%' : '—';
+    els.statStreak.textContent = stats.streak;
+    els.statBest.textContent = stats.best;
+  }
+  function addLog(answer, guess, ok){
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="log-answer">'+escapeHtml(answer)+'</span><span class="log-icon '+(ok?'ok':'bad')+'">'+(ok?'✓ ':'✗ ')+escapeHtml(guess||'(未入力)')+'</span>';
+    els.logList.insertBefore(li, els.logList.firstChild);
+    while(els.logList.children.length > 20) els.logList.removeChild(els.logList.lastChild);
+  }
+  function practiceCheck(){
+    if(roundDone || !practiceAnswer) return;
+    stopAudio();
+    var wm = isWordMode(els.charsetSel.value);
+    var expected = els.charsetSel.value.indexOf('contest') === 0 ? practiceAnswer.split(' ')[1] : practiceAnswer;
+    var g = normalize(els.guessInput.value, wm), a = normalize(expected, wm);
+    var ok = g.length > 0 && g === a;
+    stats.rounds++;
+    if(ok){ stats.correct++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else { stats.streak = 0; }
+    saveJSON('cwtrainer.stats', stats);
+    updateStatsUI();
+    els.fbGuess.innerHTML = renderDiff(g, a);
+    els.fbAnswer.textContent = a;
+    els.fbMorse.innerHTML = morseHtml(a);
+    els.fbVerdict.textContent = ok ? '✓ 正解！' : '✗ 不正解';
+    els.fbVerdict.className = 'verdict ' + (ok ? 'ok' : 'bad');
+    els.feedback.hidden = false;
+    addLog(a, g, ok);
+    roundDone = true;
+    els.checkBtn.disabled = true;
+    els.nextBtn.disabled = false;
+  }
+
+  els.playBtn.addEventListener('click', function(){ if(practicePlaying) practicePause(); else practicePlay(); });
+  els.pReplayBtn.addEventListener('click', practiceReplay);
+  els.checkBtn.addEventListener('click', practiceCheck);
+  els.nextBtn.addEventListener('click', function(){ practiceNewRound(); els.guessInput.focus(); });
+  els.guessInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); if(!roundDone) practiceCheck(); else { practiceNewRound(); } }
+  });
+  els.resetStatsBtn.addEventListener('click', function(){
+    confirmDialog('通常練習の成績と履歴をリセットしますか？', 'リセット', function(){
+      stats = { rounds:0, correct:0, streak:0, best:0 };
+      saveJSON('cwtrainer.stats', stats);
+      updateStatsUI();
+      els.logList.innerHTML = '';
+    });
+  });
+
+  // ---------- Score attack ----------
+  var GAME_MS = 60000;
+  function limitFor(mode){ return mode === 'contest' ? 180000 : 120000; }
+  function limitLabel(ms){ return ms >= 120000 ? (ms/60000) + '分' : (ms/1000) + '秒'; }
+  var TIERS = [
+    { min:0,  lv:'Lv1', label:'英数字1文字',        next:3 },
+    { min:3,  lv:'Lv2', label:'2文字 略符号・挨拶',  next:6 },
+    { min:6,  lv:'Lv3', label:'3文字 略符号・Q符号',   next:10 },
+    { min:10, lv:'Lv4', label:'コールサイン 6文字',  next:15 },
+    { min:15, lv:'Lv5', label:'6文字 / 8文字(移動運用)', next:null }
+  ];
+  function tierFor(score){
+    for(var i=TIERS.length-1;i>=0;i--){ if(score >= TIERS[i].min) return TIERS[i]; }
+    return TIERS[0];
+  }
+  function attackQuestion(score){
+    if(score < 3) return pick((LETTERS+DIGITS).split(''));
+    if(score < 6) return Math.random() < 0.25 ? pick(GREET2) : pick(ABBR2);
+    if(score < 10) return pick(ABBR3);
+    if(score < 15) return callsign6();
+    return Math.random() < 0.5 ? callsign6() : callsign8();
+  }
+
+  var MODE_LABEL = { practice:'練習モード', callsign:'コールサインモード', number:'コンテストナンバーモード', contest:'コンテストモード' };
+  function selectedModeKey(){
+    var m = els.atkMode.value;
+    return (m === 'number' || m === 'contest') ? m + ':' + els.atkContest.value : m;
+  }
+  function modeKeyLabel(key){
+    var parts = key.split(':');
+    return MODE_LABEL[parts[0]] + (parts[1] ? '（' + CONTESTS[parts[1]].label + '）' : '');
+  }
+  function refreshAttackMode(){
+    var m = els.atkMode.value, ck = els.atkContest.value, ex = CONTESTS[ck].ex;
+    els.atkContestField.hidden = !(m === 'number' || m === 'contest');
+    els.atkTiers.hidden = m !== 'practice';
+    var desc = {
+      practice: '2分間で何問正解できるかに挑戦します。1問正解ごとに1点。正解すると自動で次の問題へ進み、スコアが上がるほど問題が長くなります。問題は正解するまで繰り返し再生されます。',
+      callsign: '実在局のコールサイン（例: JR4ZUZ）だけが出題されます。1問正解ごとに1点、2分間で何問正解できるかに挑戦します。',
+      number: '「5NN ' + ex + '」の形式でコンテストナンバーだけが出題されます。5NNに続く部分（例: ' + ex + '）を入力してください。1問正解ごとに1点、制限時間は2分です。',
+      contest: 'コールサイン → その局のコンテストナンバーの順に交互に出題されます。ナンバーはその局の運用エリアで実際にあり得るものです（例: ' + (CONTESTS[ck].ccall || 'JR4ZUZ') + ' → ' + CONTESTS[ck].cex + '）。ナンバーは5NNに続く部分を入力します。コールサインとコンテストナンバーの両方に正解して1点、制限時間は3分です。'
+    }[m];
+    els.atkModeDesc.textContent = desc;
+    els.atkHeading.textContent = 'スコアアタック · ' + limitLabel(limitFor(m));
+    if(!gameActive()) renderHighscores(null);
+  }
+
+  var game = { state:'idle', score:0, total:GAME_MS, remaining:GAME_MS, lastTick:0, raf:null, cur:null, step:0, call:'', mode:'practice', contest:'allja', modeKey:'practice', solved:[], countdownTimer:null, wasRunning:false };
+
+  function makeQuestion(){
+    var q;
+    switch(game.mode){
+      case 'callsign':
+        q = callsign6(); return { play:q, answer:q, kind:'コールサイン' };
+      case 'number':
+        q = contestExchange(game.contest); return { play:'5NN ' + q, answer:q, kind:'コンテストナンバー' };
+      case 'contest':
+        if(game.step % 2 === 0){
+          game.pair = contestPair(game.contest);
+          return { play:game.pair.call, answer:game.pair.call, kind:'コールサイン' };
+        }
+        q = game.pair.num;
+        return { play:'5NN ' + q, answer:q, kind:'コンテストナンバー' };
+      default:
+        q = attackQuestion(game.score); return { play:q, answer:q, kind:'' };
+    }
+  }
+  function runStatus(){
+    var k = game.cur && game.cur.kind;
+    return '🔊 受信中… ' + (k ? k + 'を入力' : '聞こえた内容を入力');
+  }
+
+  function setAttackView(view){
+    els.atkIdle.hidden = view !== 'idle';
+    els.atkRun.hidden = view !== 'run';
+    els.atkResult.hidden = view !== 'result';
+  }
+  function gameActive(){ return game.state === 'countdown' || game.state === 'running' || game.state === 'paused'; }
+  function lockForGame(on){
+    els.tabPractice.disabled = on;
+    els.tabAttack.disabled = on;
+    els.wcRange.disabled = on;
+    els.wfRange.disabled = on;
+    document.querySelectorAll('.step[data-for="wcRange"], .step[data-for="wfRange"]').forEach(function(b){ b.disabled = on; });
+    els.speedLockNote.hidden = !on;
+  }
+  function renderHud(){
+    var sec = Math.max(0, game.remaining)/1000;
+    els.atkTime.textContent = sec.toFixed(1);
+    var low = sec <= 10;
+    els.atkTime.classList.toggle('low', low);
+    els.atkBarWrap.classList.toggle('low', low);
+    els.atkBar.style.width = (Math.max(0, game.remaining)/game.total*100) + '%';
+    els.atkScore.textContent = game.score;
+    if(game.mode === 'practice'){
+      var t = tierFor(game.score);
+      els.atkLevel.textContent = t.lv;
+      els.atkLevelSub.textContent = t.label + (t.next ? ' (次: '+t.next+'点)' : '');
+    } else {
+      els.atkLevel.textContent = { callsign:'コールサイン', number:'ナンバー', contest:'コンテスト' }[game.mode];
+      els.atkLevelSub.textContent = game.mode === 'callsign' ? '' : CONTESTS[game.contest].label;
+    }
+  }
+  function renderControls(){
+    var running = game.state === 'running', paused = game.state === 'paused';
+    els.atkPauseBtn.disabled = !(running || paused);
+    els.atkPauseBtn.textContent = paused ? '▶ 再開' : '⏸ 一時停止';
+    els.atkReplayBtn.disabled = !running;
+    els.atkQuitBtn.disabled = !(running || paused);
+    els.atkMuteBtn.textContent = muted ? '🔈 ミュート解除' : '🔇 ミュート';
+    els.atkMuteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    els.atkMuteBtn.classList.toggle('on', muted);
+    els.atkInput.disabled = !(running || paused);
+  }
+  function setStatus(text, big){
+    els.atkStatus.textContent = text;
+    els.atkStatus.classList.toggle('big', !!big);
+  }
+
+  function startGame(){
+    ensureAudioCtx();
+    persistSettings();
+    stopAudio();
+    muted = false; applyVolume();
+    game.state = 'countdown';
+    game.score = 0;
+    game.total = limitFor(els.atkMode.value);
+    game.remaining = game.total;
+    game.solved = [];
+    game.cur = null;
+    game.step = 0;
+    game.call = '';
+    game.mode = els.atkMode.value;
+    game.contest = els.atkContest.value;
+    game.modeKey = selectedModeKey();
+    game.startWc = +els.wcRange.value;
+    game.startWf = +els.wfRange.value;
+    els.atkInput.value = '';
+    els.atkFeedback.innerHTML = '';
+    lockForGame(true);
+    setAttackView('run');
+    renderHud(); renderControls();
+    var n = 3;
+    setStatus(String(n), true);
+    function tick(){
+      n--;
+      if(n > 0){ setStatus(String(n), true); game.countdownTimer = setTimeout(tick, 800); }
+      else { beginRunning(); }
+    }
+    game.countdownTimer = setTimeout(tick, 800);
+  }
+  function beginRunning(){
+    game.state = 'running';
+    game.cur = makeQuestion();
+    game.lastTick = performance.now();
+    setStatus(runStatus());
+    renderControls();
+    playLoop(game.cur.play);
+    els.atkInput.focus();
+    game.raf = requestAnimationFrame(loop);
+  }
+  function loop(now){
+    if(game.state !== 'running' && game.state !== 'paused'){ game.raf = null; return; }
+    game.remaining -= (now - game.lastTick);
+    game.lastTick = now;
+    if(game.remaining <= 0){ game.remaining = 0; renderHud(); endGame(); return; }
+    renderHud();
+    game.raf = requestAnimationFrame(loop);
+  }
+  function nextQuestion(){
+    var prev = game.cur ? game.cur.answer : '', q;
+    var tries = 0;
+    if(game.mode === 'contest'){ q = makeQuestion(); }
+    else { do { q = makeQuestion(); tries++; } while(q.answer === prev && tries < 10); }
+    game.cur = q;
+    if(game.state === 'paused'){
+      game.state = 'running';
+      renderControls();
+    }
+    if(game.state === 'running'){
+      setStatus(runStatus());
+      var gap = Math.max(700, computeTiming().wordGap * 2 * 1000);
+      playLoop(q.play, gap);
+    }
+  }
+  function onAttackInput(){
+    if(game.state !== 'running' && game.state !== 'paused') return;
+    var g = normalize(els.atkInput.value, false);
+    if(g && game.cur && g === game.cur.answer){
+      var isCallStep = game.mode === 'contest' && game.step % 2 === 0;
+      if(!isCallStep) game.score++;
+      game.step++;
+      if(game.mode === 'contest'){ if(!isCallStep) game.solved.push(game.pair.call + ' ' + game.cur.answer); }
+      else game.solved.push(game.cur.answer);
+      els.atkFeedback.innerHTML = '<span class="ok">✓ '+escapeHtml(game.cur.play)+'</span>';
+      els.atkInput.value = '';
+      renderHud();
+      nextQuestion();
+    }
+  }
+  function onAttackEnter(){
+    if(game.state !== 'running' && game.state !== 'paused') return;
+    var g = normalize(els.atkInput.value, false);
+    if(!g) return;
+    if(game.cur && g !== game.cur.answer){
+      els.atkFeedback.innerHTML = '<span class="bad">✗ '+escapeHtml(g)+' ではありません</span>';
+      els.atkInput.value = '';
+    }
+  }
+  function pauseGame(){
+    if(game.state !== 'running') return;
+    game.state = 'paused';
+    stopAudio();
+    setStatus('⏸ 音声を一時停止中（制限時間は進んでいます）');
+    renderControls();
+  }
+  function resumeGame(){
+    if(game.state !== 'paused') return;
+    ensureAudioCtx();
+    game.state = 'running';
+    setStatus(runStatus());
+    renderControls();
+    playLoop(game.cur.play);
+    els.atkInput.focus();
+  }
+  function abortGame(){
+    clearTimeout(game.countdownTimer);
+    stopAudio();
+    game.state = 'idle';
+    lockForGame(false);
+    setAttackView('idle');
+  }
+  function endGame(){
+    if(!els.modal.hidden){ els.modal.hidden = true; modalHandlers = null; }
+    stopAudio();
+    game.state = 'over';
+    lockForGame(false);
+    renderControls();
+    var rank = recordHighscore(game.score);
+    els.resScore.textContent = game.score;
+    if(game.score > 0 && rank === 0) els.resBadge.textContent = '🏆 ハイスコア更新！';
+    else if(rank >= 0) els.resBadge.textContent = '第' + (rank+1) + '位にランクインしました';
+    else els.resBadge.textContent = '';
+    els.resLast.innerHTML = (game.cur
+      ? '最後の問題: <span class="mono">'+escapeHtml(game.cur.play)+'</span>　<span class="mono">'+morseHtml(game.cur.play)+'</span><br>'
+      : '') + 'モード: ' + escapeHtml(modeKeyLabel(game.modeKey));
+    els.resHistory.innerHTML = game.solved.length
+      ? game.solved.map(function(q){ return '<span class="chip">'+escapeHtml(q)+'</span>'; }).join('')
+      : '<span class="note">正解した問題はありませんでした。</span>';
+    setAttackView('result');
+    els.atkRetryBtn.focus();
+  }
+
+  els.atkStartBtn.addEventListener('click', startGame);
+  els.atkRetryBtn.addEventListener('click', startGame);
+  els.atkBackBtn.addEventListener('click', function(){ game.state = 'idle'; setAttackView('idle'); renderHighscores(null); });
+  els.atkMode.addEventListener('change', function(){ persistSettings(); refreshAttackMode(); });
+  els.atkContest.addEventListener('change', function(){ persistSettings(); refreshAttackMode(); });
+  els.atkInput.addEventListener('input', onAttackInput);
+  els.atkInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); onAttackEnter(); } });
+  els.atkPauseBtn.addEventListener('click', function(){ if(game.state === 'running') pauseGame(); else resumeGame(); });
+  els.atkReplayBtn.addEventListener('click', function(){ if(game.state === 'running'){ ensureAudioCtx(); playLoop(game.cur.play); els.atkInput.focus(); } });
+  els.atkMuteBtn.addEventListener('click', function(){ muted = !muted; applyVolume(); renderControls(); });
+  els.atkQuitBtn.addEventListener('click', function(){
+    if(!(game.state === 'running' || game.state === 'paused')) return;
+    game.wasRunning = game.state === 'running';
+    pauseGame();
+    confirmDialog('スコアアタックを途中終了しますか？ 現在のスコア（' + game.score + '点）は記録されません。確認中も制限時間は進みます。', '終了する',
+      function(){ abortGame(); },
+      function(){ if(game.wasRunning) resumeGame(); }
+    );
+  });
+  els.playerName.addEventListener('change', persistSettings);
+
+  // ---------- High scores ----------
+  function recordHighscore(score){
+    if(score <= 0) return -1;
+    var entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      score: score,
+      name: (els.playerName.value || '').trim().slice(0,16),
+      wc: game.startWc, wf: game.startWf,
+      mode: game.modeKey,
+      date: new Date().toISOString()
+    };
+    highscores.push(entry);
+    var mine = hsFor(game.modeKey).slice(0, 10);
+    highscores = highscores.filter(function(h){ return hsKey(h) !== game.modeKey; }).concat(mine);
+    saveJSON('cwtrainer.highscores', highscores);
+    var rank = -1;
+    for(var i=0;i<mine.length;i++){ if(mine[i].id === entry.id){ rank = i; break; } }
+    renderHighscores(rank >= 0 ? entry.id : null, game.modeKey);
+    return rank;
+  }
+  function fmtDate(iso){
+    var d = new Date(iso);
+    if(isNaN(d)) return '—';
+    function p(n){ return (n<10?'0':'')+n; }
+    return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+  function hsKey(h){ return h.mode || 'practice'; }
+  function hsFor(key){
+    return highscores.filter(function(h){ return hsKey(h) === key; })
+      .sort(function(a,b){ return b.score - a.score || (a.date < b.date ? -1 : 1); });
+  }
+  var hsViewKey = 'practice';
+  function renderHighscores(freshId, key){
+    hsViewKey = key || selectedModeKey();
+    els.hsTitle.textContent = 'ハイスコア (上位10件) · ' + modeKeyLabel(hsViewKey);
+    var list = hsFor(hsViewKey);
+    els.hsBody.innerHTML = list.map(function(h, i){
+      var cls = (i===0 ? 'rank1' : '') + (h.id === freshId ? ' fresh' : '');
+      return '<tr class="'+cls+'">' +
+        '<td class="num">'+(i+1)+'</td>' +
+        '<td class="score">'+h.score+'</td>' +
+        '<td>'+(h.name ? escapeHtml(h.name) : '<span class="note">—</span>')+'</td>' +
+        '<td class="num">'+h.wc+' / '+h.wf+' WPM</td>' +
+        '<td class="num">'+fmtDate(h.date)+'</td>' +
+        '<td><button class="hs-del" data-id="'+escapeHtml(h.id)+'" aria-label="この記録を削除" title="削除">✕</button></td>' +
+      '</tr>';
+    }).join('');
+    els.hsEmpty.hidden = list.length > 0;
+    els.hsClearBtn.disabled = list.length === 0;
+  }
+  els.hsBody.addEventListener('click', function(e){
+    var btn = e.target.closest('.hs-del');
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    var h = highscores.filter(function(x){ return x.id === id; })[0];
+    if(!h) return;
+    confirmDialog(fmtDate(h.date) + ' の記録（' + h.score + '点）を削除しますか？', '削除する', function(){
+      highscores = highscores.filter(function(x){ return x.id !== id; });
+      saveJSON('cwtrainer.highscores', highscores);
+      renderHighscores(null, hsViewKey);
+    });
+  });
+  els.hsClearBtn.addEventListener('click', function(){
+    var key = hsViewKey;
+    if(!hsFor(key).length) return;
+    confirmDialog('「' + modeKeyLabel(key) + '」のハイスコアをすべて削除しますか？ この操作は元に戻せません。', 'すべて削除', function(){
+      highscores = highscores.filter(function(h){ return hsKey(h) !== key; });
+      saveJSON('cwtrainer.highscores', highscores);
+      renderHighscores(null, hsViewKey);
+    });
+  });
+
+  // ---------- Tabs ----------
+  function showMode(mode){
+    if(gameActive()) return;
+    stopAudio();
+    var atk = mode === 'attack';
+    els.tabPractice.setAttribute('aria-selected', atk ? 'false' : 'true');
+    els.tabAttack.setAttribute('aria-selected', atk ? 'true' : 'false');
+    els.practicePanel.hidden = atk;
+    els.statsPanel.hidden = atk;
+    els.practiceSettings.hidden = atk;
+    els.attackPanel.hidden = !atk;
+    els.hsPanel.hidden = !atk;
+    settings.mode = mode;
+    saveJSON('cwtrainer.settings', settings);
+  }
+  els.tabPractice.addEventListener('click', function(){ showMode('practice'); });
+  els.tabAttack.addEventListener('click', function(){ showMode('attack'); });
+
+  // ---------- Settings wiring ----------
+  els.charsetSel.addEventListener('change', function(){ refreshGroupLenMode(); persistSettings(); practiceNewRound(); });
+  var lastGood = { groupLen:+els.groupLen.value, wcRange:+els.wcRange.value, wfRange:+els.wfRange.value };
+  function clampInput(el){
+    var v = parseInt(el.value, 10);
+    if(isNaN(v)) v = lastGood[el.id];
+    v = Math.max(+el.min, Math.min(+el.max, v));
+    el.value = v;
+    lastGood[el.id] = v;
+    return v;
+  }
+  els.groupLen.addEventListener('change', function(){
+    clampInput(els.groupLen); refreshLabels(); persistSettings(); practiceNewRound();
+  });
+  els.wcRange.addEventListener('change', function(){
+    clampInput(els.wcRange);
+    els.wfRange.max = els.wcRange.value;
+    if(+els.wfRange.value > +els.wcRange.value){ els.wfRange.value = els.wcRange.value; lastGood.wfRange = +els.wfRange.value; }
+    refreshLabels(); persistSettings();
+  });
+  els.wfRange.addEventListener('change', function(){ clampInput(els.wfRange); refreshLabels(); persistSettings(); });
+  document.querySelectorAll('.step').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var el = $(btn.getAttribute('data-for'));
+      if(!el || el.disabled) return;
+      var cur = parseInt(el.value, 10);
+      if(isNaN(cur)) cur = lastGood[el.id];
+      var next = Math.max(+el.min, Math.min(+el.max, cur + (+btn.getAttribute('data-d'))));
+      if(next === cur && String(cur) === el.value) return;
+      el.value = next;
+      el.dispatchEvent(new Event('change'));
+    });
+  });
+  [els.groupLen, els.wcRange, els.wfRange].forEach(function(el){
+    el.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+  });
+  els.volRange.addEventListener('input', function(){ refreshLabels(); persistSettings(); applyVolume(); });
+
+  // ---------- Reference ----------
+  (function buildReference(){
+    var html = '';
+    (LETTERS+DIGITS).split('').forEach(function(ch){
+      html += '<div class="ref-cell"><span>'+ch+'</span><span class="ref-code mono">'+pretty(MORSE[ch])+'</span></div>';
+    });
+    Object.keys(REFERENCE_EXTRA).forEach(function(k){
+      html += '<div class="ref-cell"><span>'+escapeHtml(k)+'</span><span class="ref-code mono">'+pretty(REFERENCE_EXTRA[k])+'</span></div>';
+    });
+    els.refGrid.innerHTML = html;
+  })();
+
+  // ---------- Init ----------
+  applySettingsToUI();
+  lastGood = { groupLen:+els.groupLen.value, wcRange:+els.wcRange.value, wfRange:+els.wfRange.value };
+  updateStatsUI();
+  refreshAttackMode();
+  setAttackView('idle');
+  practiceNewRound();
+  showMode(settings.mode === 'attack' ? 'attack' : 'practice');
+})();
+</script>
+
+</body>
+</html>
