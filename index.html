@@ -72,6 +72,11 @@
   .btn.fixed-w{ white-space:nowrap; min-width:7.5em; }
   .btn.mute-w{ min-width:10em; }
   .btn.on{ border-color:var(--bad); color:var(--bad); }
+  .btn.toggle::before{ content:""; display:inline-block; width:.55em; height:.55em; border-radius:50%; margin-right:.5em; vertical-align:.08em; border:1.5px solid var(--text-dim); }
+  .btn.toggle[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent-strong); }
+  .btn.toggle[aria-pressed="true"]::before{ background:var(--accent); border-color:var(--accent); }
+  .vis-wrap{ margin-top:12px; padding:8px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); }
+  .vis-wrap canvas{ display:block; width:100%; height:64px; }
   .ghost-btn{ background:none; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; padding:6px 12px; font-size:.8rem; cursor:pointer; font-family:inherit; }
   .ghost-btn:hover{ color:var(--text); border-color:var(--accent); }
 
@@ -250,6 +255,10 @@
           <button id="playBtn" class="btn primary fixed-w">▶ 再生する</button>
           <button id="pReplayBtn" class="btn">↻ 頭から再生</button>
           <button id="nextBtn" class="btn" disabled>次の問題 →</button>
+          <button id="visBtn" class="btn toggle" aria-pressed="false">音を可視化</button>
+        </div>
+        <div id="visWrap" class="vis-wrap" hidden>
+          <canvas id="visCanvas" aria-label="再生中のモールス符号の長点・短点を表示"></canvas>
         </div>
         <div class="answer-row">
           <label for="guessInput" class="sr-label">聞き取った内容を入力</label>
@@ -272,7 +281,7 @@
             <div class="field">
               <label for="atkMode">モード</label>
               <select id="atkMode">
-                <option value="practice">練習モード</option>
+                <option value="practice">ノーマルモード</option>
                 <option value="callsign">コールサインモード</option>
                 <option value="number">コンテストナンバーモード</option>
                 <option value="contest">コンテストモード</option>
@@ -527,7 +536,7 @@
   }
   function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
-  var DEFAULT_SETTINGS = { charset:'words', groupLen:2, wc:20, wf:14, vol:60, mode:'practice', name:'' };
+  var DEFAULT_SETTINGS = { charset:'words', groupLen:2, wc:20, wf:14, vol:60, mode:'practice', name:'', vis:false };
   var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('cwtrainer.settings', {}));
   var stats = Object.assign({ rounds:0, correct:0, streak:0, best:0 }, loadJSON('cwtrainer.stats', {}));
   var highscores = loadJSON('cwtrainer.highscores', []);
@@ -536,7 +545,7 @@
   // ---------- elements ----------
   var els = {};
   ['tabPractice','tabAttack','practicePanel','attackPanel','statsPanel','hsPanel','practiceSettings',
-   'playStatus','playBtn','pReplayBtn','nextBtn','checkBtn','guessInput','feedback','fbGuess','fbAnswer','fbMorse','fbVerdict',
+   'playStatus','playBtn','pReplayBtn','nextBtn','visBtn','visWrap','visCanvas','checkBtn','guessInput','feedback','fbGuess','fbAnswer','fbMorse','fbVerdict',
    'charsetSel','groupLenField','groupLen','groupLenVal','groupLenLabelText','groupLenNote',
    'wcRange','wcVal','wfRange','wfVal','volRange','volVal','speedLockNote',
    'statRounds','statCorrect','statAcc','statStreak','statBest','resetStatsBtn','logList','refGrid',
@@ -608,6 +617,7 @@
     els.playerName.value = settings.name || '';
     if(settings.atkMode) els.atkMode.value = settings.atkMode;
     if(settings.atkContest) els.atkContest.value = settings.atkContest;
+    setVisualizer(!!settings.vis);
     refreshGroupLenMode();
   }
 
@@ -660,6 +670,7 @@
   }
   function stopAudio(){
     player.token++;
+    if(player.vis && audioCtx) player.vis.stopAt = audioCtx.currentTime;
     clearTimeout(player.timer);
     player.timer = null;
     if(player.osc){
@@ -694,6 +705,7 @@
     osc.start(start);
     osc.stop(t + 0.02);
     player.osc = osc;
+    player.vis = { token:myToken, start:start, end:t, segs:segs, stopAt:Infinity };
     osc.onended = function(){
       if(player.osc === osc) player.osc = null;
       if(myToken === player.token && cb) cb(timing);
@@ -732,6 +744,56 @@
   els.modalCancel.addEventListener('click', function(){ closeModal('cancel'); });
   els.modal.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal('cancel'); });
 
+  // ---------- 音の可視化（通常練習） ----------
+  // 再生中の符号を、鳴った分だけ左から順に帯で描く（長点・短点の長さと間隔がそのまま見える）。左端のランプは音が鳴っている間だけ点灯。
+  var visOn = false, visToken = -1, visRaf = 0;
+  function setVisualizer(on){
+    visOn = on;
+    els.visBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    els.visWrap.hidden = !on;
+    cancelAnimationFrame(visRaf);
+    if(on) visRaf = requestAnimationFrame(drawVisualizer);
+  }
+  function drawVisualizer(){
+    visRaf = requestAnimationFrame(drawVisualizer);
+    var cv = els.visCanvas;
+    if(els.practicePanel.hidden || !cv.clientWidth) return;
+    var dpr = window.devicePixelRatio || 1, w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+    if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+    var g = cv.getContext('2d'), css = getComputedStyle(document.documentElement);
+    var on = css.getPropertyValue('--accent').trim(), dim = css.getPropertyValue('--border').trim();
+    g.clearRect(0, 0, w, h);
+    var v = player.vis && player.vis.token === visToken ? player.vis : null;
+    var now = v && audioCtx ? Math.min(audioCtx.currentTime, v.stopAt) : 0;
+    var lampX = h/2, lampR = h*0.28, x0 = h + 8*dpr, tw = w - x0 - 4*dpr, mid = h/2, bh = h*0.34;
+    var sounding = false;
+    g.strokeStyle = dim; g.lineWidth = dpr;
+    g.beginPath(); g.moveTo(x0, mid); g.lineTo(x0 + tw, mid); g.stroke();
+    if(v){
+      var total = v.end - v.start, t = v.start, scale = tw / total;
+      g.fillStyle = on;
+      v.segs.forEach(function(seg){
+        if(seg.tone && t < now){
+          var d = Math.min(seg.dur, now - t);
+          g.fillRect(x0 + (t - v.start)*scale, mid - bh/2, Math.max(dpr, d*scale), bh);
+          if(now < t + seg.dur) sounding = true;
+        }
+        t += seg.dur;
+      });
+      if(now > v.start && now < v.end){
+        g.fillStyle = dim;
+        g.fillRect(x0 + (now - v.start)*scale, h*0.12, dpr*1.5, h*0.76);
+      }
+    }
+    g.beginPath(); g.arc(lampX, mid, lampR, 0, Math.PI*2);
+    g.fillStyle = sounding ? on : dim; g.fill();
+  }
+  els.visBtn.addEventListener('click', function(){
+    setVisualizer(!visOn);
+    settings.vis = visOn;
+    saveJSON('cwtrainer.settings', settings);
+  });
+
   // ---------- Practice mode ----------
   var practiceAnswer = '', roundDone = false, practicePlaying = false;
 
@@ -763,11 +825,13 @@
   function practicePlay(){
     if(practicePlaying || !practiceAnswer) return;
     playLoop(practiceAnswer);
+    visToken = player.token;
     setPracticePlaying(true);
   }
   function practiceReplay(){
     if(!practiceAnswer) return;
     playLoop(practiceAnswer);
+    visToken = player.token;
     setPracticePlaying(true);
     els.guessInput.focus();
   }
@@ -778,6 +842,7 @@
   }
   function practiceNewRound(){
     stopAudio();
+    visToken = -1;
     practiceAnswer = practiceGenerate();
     els.guessInput.value = '';
     els.feedback.hidden = true;
@@ -877,7 +942,7 @@
     return Math.random() < 0.5 ? callsign6() : callsign8();
   }
 
-  var MODE_LABEL = { practice:'練習モード', callsign:'コールサインモード', number:'コンテストナンバーモード', contest:'コンテストモード' };
+  var MODE_LABEL = { practice:'ノーマルモード', callsign:'コールサインモード', number:'コンテストナンバーモード', contest:'コンテストモード' };
   function selectedModeKey(){
     var m = els.atkMode.value;
     return (m === 'number' || m === 'contest') ? m + ':' + els.atkContest.value : m;
