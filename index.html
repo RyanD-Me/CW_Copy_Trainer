@@ -253,7 +253,7 @@
         <p class="play-status" id="playStatus">待機中</p>
         <div class="controls-row practice-controls">
           <button id="playBtn" class="btn primary fixed-w">▶ 再生する</button>
-          <button id="pReplayBtn" class="btn">↻ 頭から再生</button>
+          <button id="pReplayBtn" class="btn">↻ 最初から再生</button>
           <button id="nextBtn" class="btn" disabled>次の問題 →</button>
           <button id="visBtn" class="btn toggle" aria-pressed="false">音を可視化</button>
         </div>
@@ -329,7 +329,7 @@
           <p id="atkFeedback" class="atk-feedback" aria-live="polite"></p>
           <div class="controls-row atk-controls">
             <button id="atkPauseBtn" class="btn fixed-w">⏸ 一時停止</button>
-            <button id="atkReplayBtn" class="btn">↻ 頭から再生</button>
+            <button id="atkReplayBtn" class="btn">↻ 最初から再生</button>
             <button id="atkMuteBtn" class="btn fixed-w mute-w" aria-pressed="false">🔇 ミュート</button>
             <button id="atkQuitBtn" class="btn">■ 途中終了</button>
           </div>
@@ -680,7 +680,8 @@
     onPracticePlayEnd();
   }
   // plays text once; cb fires when finished (unless stopped)
-  function playOnce(text, cb){
+  // fromSeg: 途中から鳴らすときの開始位置（buildSegments の区切りの番号）。それより前は鳴らさない
+  function playOnce(text, cb, fromSeg){
     var ctx = ensureAudioCtx();
     var myToken = player.token;
     var timing = computeTiming();
@@ -691,10 +692,12 @@
     osc.frequency.value = TONE_FREQ;
     osc.connect(gain); gain.connect(masterGain);
     var peak = 0.35, ramp = 0.004;
-    var start = ctx.currentTime + 0.05, t = start;
-    gain.gain.setValueAtTime(0, start);
-    segs.forEach(function(seg){
-      if(seg.tone){
+    var begin = ctx.currentTime + 0.05, skip = 0;
+    for(var si=0; si<(fromSeg||0) && si<segs.length; si++) skip += segs[si].dur;
+    var start = begin - skip, t = start;
+    gain.gain.setValueAtTime(0, begin);
+    segs.forEach(function(seg, i){
+      if(seg.tone && i >= (fromSeg||0)){
         gain.gain.setValueAtTime(0, t);
         gain.gain.linearRampToValueAtTime(peak, t+ramp);
         gain.gain.setValueAtTime(peak, Math.max(t+ramp, t+seg.dur-ramp));
@@ -702,8 +705,8 @@
       }
       t += seg.dur;
     });
-    osc.start(start);
-    osc.stop(t + 0.02);
+    osc.start(begin);
+    osc.stop(Math.max(t, begin) + 0.02);
     player.osc = osc;
     player.vis = { token:myToken, start:start, end:t, segs:segs, stopAt:Infinity };
     osc.onended = function(){
@@ -711,16 +714,29 @@
       if(myToken === player.token && cb) cb(timing);
     };
   }
-  // plays text repeatedly with a separating gap until stopAudio()
-  function playLoop(text, delayMs){
+  // 今鳴っている位置（区切りの番号）。符号の途中なら、その符号の頭から鳴らし直せる位置を返す。1回分を鳴らし終えた後の間なら0
+  function currentSegIndex(){
+    var v = player.vis;
+    if(!v || v.token !== player.token || !audioCtx) return 0;
+    var now = audioCtx.currentTime, t = v.start;
+    if(now <= v.start || now >= v.end) return 0;
+    for(var i=0; i<v.segs.length; i++){
+      if(now < t + v.segs[i].dur) return i;
+      t += v.segs[i].dur;
+    }
+    return 0;
+  }
+  // plays text repeatedly with a separating gap until stopAudio(); fromSeg は最初の1回だけ途中から鳴らす位置
+  function playLoop(text, delayMs, fromSeg){
     stopAudio();
-    var myToken = player.token;
+    var myToken = player.token, first = fromSeg || 0;
     function once(){
+      var f = first; first = 0;
       playOnce(text, function(timing){
         if(myToken !== player.token) return;
         var gapMs = timing.wordGap * 2 * 1000;
         player.timer = setTimeout(function(){ if(myToken === player.token) once(); }, gapMs);
-      });
+      }, f);
     }
     if(delayMs > 0){ player.timer = setTimeout(function(){ if(myToken === player.token) once(); }, delayMs); }
     else once();
@@ -804,6 +820,7 @@
 
   // ---------- Practice mode ----------
   var practiceAnswer = '', roundDone = false, practicePlaying = false;
+  var practiceResume = 0;   // 一時停止した位置。▶再生するでここから続きを鳴らす（最初から再生・新しい問題・判定で0に戻す）
 
   function onPracticePlayEnd(){
     if(!practicePlaying) return;
@@ -832,12 +849,14 @@
   }
   function practicePlay(){
     if(practicePlaying || !practiceAnswer) return;
-    playLoop(practiceAnswer);
+    playLoop(practiceAnswer, 0, practiceResume);
+    practiceResume = 0;
     visToken = player.token;
     setPracticePlaying(true);
   }
   function practiceReplay(){
     if(!practiceAnswer) return;
+    practiceResume = 0;
     playLoop(practiceAnswer);
     visToken = player.token;
     setPracticePlaying(true);
@@ -845,12 +864,14 @@
   }
   function practicePause(){
     if(!practicePlaying) return;
+    practiceResume = currentSegIndex();
     stopAudio();
     setPracticePlaying(false, '⏸ 一時停止中');
   }
   function practiceNewRound(){
     stopAudio();
     visToken = -1;
+    practiceResume = 0;
     practiceAnswer = practiceGenerate();
     els.guessInput.value = '';
     els.feedback.hidden = true;
@@ -891,6 +912,7 @@
   function practiceCheck(){
     if(roundDone || !practiceAnswer) return;
     stopAudio();
+    practiceResume = 0;
     var wm = isWordMode(els.charsetSel.value);
     var expected = els.charsetSel.value.indexOf('contest') === 0 ? practiceAnswer.split(' ')[1] : practiceAnswer;
     var g = normalize(els.guessInput.value, wm), a = normalize(expected, wm);
