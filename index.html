@@ -561,7 +561,7 @@
   }
   function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
-  var DEFAULT_SETTINGS = { charset:'words', groupLen:2, wc:20, wf:14, vol:60, mode:'practice', name:'', vis:false, chime:true };
+  var DEFAULT_SETTINGS = { charset:'letters', groupLen:1, wc:16, wf:16, vol:60, mode:'practice', name:'', vis:false, chime:true };
   var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('cwtrainer.settings', {}));
   var stats = Object.assign({ rounds:0, correct:0, streak:0, best:0 }, loadJSON('cwtrainer.stats', {}));
   var highscores = loadJSON('cwtrainer.highscores', []);
