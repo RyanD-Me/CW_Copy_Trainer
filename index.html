@@ -76,7 +76,7 @@
   .btn.toggle[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent-strong); }
   .btn.toggle[aria-pressed="true"]::before{ background:var(--accent); border-color:var(--accent); }
   .vis-wrap{ margin-top:12px; padding:8px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); }
-  .vis-wrap canvas{ display:block; width:100%; height:64px; }
+  .vis-wrap canvas{ display:block; width:100%; height:44px; }
   .ghost-btn{ background:none; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; padding:6px 12px; font-size:.8rem; cursor:pointer; font-family:inherit; }
   .ghost-btn:hover{ color:var(--text); border-color:var(--accent); }
 
@@ -765,25 +765,33 @@
     g.clearRect(0, 0, w, h);
     var v = player.vis && player.vis.token === visToken ? player.vis : null;
     var now = v && audioCtx ? Math.min(audioCtx.currentTime, v.stopAt) : 0;
-    var lampX = h/2, lampR = h*0.28, x0 = h + 8*dpr, tw = w - x0 - 4*dpr, mid = h/2, bh = h*0.34;
+    var lampX = h/2, lampR = h*0.28, x0 = h + 8*dpr, tw = w - x0 - 4*dpr, mid = h/2, bh = 6*dpr;
     var sounding = false;
     g.strokeStyle = dim; g.lineWidth = dpr;
     g.beginPath(); g.moveTo(x0, mid); g.lineTo(x0 + tw, mid); g.stroke();
     if(v){
-      var total = v.end - v.start, t = v.start, scale = tw / total;
+      // 1問を横幅に合わせるが、短点が帯の太さより短くならない縮尺は保つ（はみ出す分は再生位置に合わせて左へ送る）
+      var dit = Infinity;
+      v.segs.forEach(function(seg){ if(seg.tone) dit = Math.min(dit, seg.dur); });
+      var total = v.end - v.start, t = v.start, scale = Math.max(tw / total, bh * 1.2 / dit);
+      var shift = Math.max(0, (Math.min(now, v.end) - v.start) * scale - tw * 0.9);
+      g.save(); g.beginPath(); g.rect(x0, 0, tw, h); g.clip();
       g.fillStyle = on;
       v.segs.forEach(function(seg){
         if(seg.tone && t < now){
-          var d = Math.min(seg.dur, now - t);
-          g.fillRect(x0 + (t - v.start)*scale, mid - bh/2, Math.max(dpr, d*scale), bh);
+          var d = Math.min(seg.dur, now - t), bx = x0 + (t - v.start)*scale - shift, bw = Math.max(dpr, d*scale);
+          g.beginPath();
+          if(g.roundRect) g.roundRect(bx, mid - bh/2, bw, bh, Math.min(bh, bw)/2); else g.rect(bx, mid - bh/2, bw, bh);
+          g.fill();
           if(now < t + seg.dur) sounding = true;
         }
         t += seg.dur;
       });
       if(now > v.start && now < v.end){
         g.fillStyle = dim;
-        g.fillRect(x0 + (now - v.start)*scale, h*0.12, dpr*1.5, h*0.76);
+        g.fillRect(x0 + (now - v.start)*scale - shift, h*0.2, dpr*1.5, h*0.6);
       }
+      g.restore();
     }
     g.beginPath(); g.arc(lampX, mid, lampR, 0, Math.PI*2);
     g.fillStyle = sounding ? on : dim; g.fill();
