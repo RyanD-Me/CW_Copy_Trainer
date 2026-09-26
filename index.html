@@ -259,14 +259,14 @@
   </header>
 
   <div class="tabs" role="tablist" aria-label="モード">
-    <button class="tab" role="tab" id="tabPractice" aria-selected="true">通常練習</button>
+    <button class="tab" role="tab" id="tabPractice" aria-selected="true">練習</button>
     <button class="tab" role="tab" id="tabAttack" aria-selected="false">スコアアタック</button>
   </div>
 
   <main class="layout">
     <div>
       <!-- Practice -->
-      <section class="panel" id="practicePanel" aria-label="通常練習">
+      <section class="panel" id="practicePanel" aria-label="練習">
         <p class="play-status" id="playStatus">待機中</p>
         <div class="controls-row play-row">
           <button id="playBtn" class="btn primary fixed-w">▶ 再生する</button>
@@ -811,7 +811,7 @@
   els.modalCancel.addEventListener('click', function(){ closeModal('cancel'); });
   els.modal.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal('cancel'); });
 
-  // ---------- 音の可視化（通常練習） ----------
+  // ---------- 音の可視化（練習） ----------
   // 再生中の符号を、鳴った分だけ左から順に帯で描く（長点・短点の長さと間隔がそのまま見える）。左端のランプは音が鳴っている間だけ点灯。
   var visOn = false, visToken = -1, visRaf = 0;
   function setVisualizer(on){
@@ -999,7 +999,7 @@
     if(e.key === 'Enter'){ e.preventDefault(); if(!roundDone) practiceCheck(); else { practiceNewRound(); } }
   });
   els.resetStatsBtn.addEventListener('click', function(){
-    confirmDialog('通常練習の成績と履歴をリセットしますか？', 'リセット', function(){
+    confirmDialog('練習の成績と履歴をリセットしますか？', 'リセット', function(){
       stats = { rounds:0, correct:0, streak:0, best:0 };
       saveJSON('cwtrainer.stats', stats);
       updateStatsUI();
