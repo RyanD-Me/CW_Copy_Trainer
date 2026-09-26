@@ -708,7 +708,7 @@
     osc.start(begin);
     osc.stop(Math.max(t, begin) + 0.02);
     player.osc = osc;
-    player.vis = { token:myToken, start:start, end:t, segs:segs, stopAt:Infinity };
+    player.vis = { token:myToken, start:start, end:t, segs:segs, dit:timing.dit, stopAt:Infinity };
     osc.onended = function(){
       if(player.osc === osc) player.osc = null;
       if(myToken === player.token && cb) cb(timing);
@@ -786,10 +786,9 @@
     g.strokeStyle = dim; g.lineWidth = dpr;
     g.beginPath(); g.moveTo(x0, mid); g.lineTo(x0 + tw, mid); g.stroke();
     if(v){
-      // 1問を横幅に合わせるが、短点が帯の太さより短くならない縮尺は保つ（はみ出す分は再生位置に合わせて左へ送る）
-      var dit = Infinity;
-      v.segs.forEach(function(seg){ if(seg.tone) dit = Math.min(dit, seg.dur); });
-      var total = v.end - v.start, t = v.start, scale = Math.max(tw / total, bh * 1.2 / dit);
+      // 縮尺は固定: 短点1つ＝帯の太さ（丸い点）、長点はその3倍。問題の長さや速度で見た目が変わらないよう、流れる速さの方を変える
+      // （はみ出す分は再生位置に合わせて左へ送る）
+      var t = v.start, scale = bh / v.dit;   // 長点だけの文字（T・M・O・0など）でも長点に見えるよう、短点の長さは再生時の設定から取る
       var shift = Math.max(0, (Math.min(now, v.end) - v.start) * scale - tw * 0.9);
       g.save(); g.beginPath(); g.rect(x0, 0, tw, h); g.clip();
       g.fillStyle = on;
