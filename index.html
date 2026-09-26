@@ -689,6 +689,21 @@
     }
     onPracticePlayEnd();
   }
+  // 正解のときの「ピンポン」（高い音→低い音）。音量・ミュートは masterGain に従い、stopAudio では止めない
+  function playChime(){
+    var ctx = ensureAudioCtx(), t0 = ctx.currentTime + 0.02;
+    [[1318.5, 0], [1046.5, 0.17]].forEach(function(n){   // E6 → C6
+      var osc = ctx.createOscillator(), g = ctx.createGain(), t = t0 + n[1];
+      osc.type = 'sine';
+      osc.frequency.value = n[0];
+      osc.connect(g); g.connect(masterGain);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.25, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      osc.start(t);
+      osc.stop(t + 0.47);
+    });
+  }
   // plays text once; cb fires when finished (unless stopped)
   // fromSeg: 途中から鳴らすときの開始位置（buildSegments の区切りの番号）。それより前は鳴らさない
   function playOnce(text, cb, fromSeg){
@@ -927,7 +942,7 @@
     var g = normalize(els.guessInput.value, wm), a = normalize(expected, wm);
     var ok = g.length > 0 && g === a;
     stats.rounds++;
-    if(ok){ stats.correct++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else { stats.streak = 0; }
+    if(ok){ stats.correct++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); playChime(); } else { stats.streak = 0; }
     saveJSON('cwtrainer.stats', stats);
     updateStatsUI();
     els.fbGuess.innerHTML = renderDiff(g, a);
@@ -1148,6 +1163,7 @@
     var g = normalize(els.atkInput.value, false);
     if(g && game.cur && g === game.cur.answer){
       var isCallStep = game.mode === 'contest' && game.step % 2 === 0;
+      playChime();
       if(!isCallStep) game.score++;
       game.step++;
       if(game.mode === 'contest'){ if(!isCallStep) game.solved.push(game.pair.call + ' ' + game.cur.answer); }
