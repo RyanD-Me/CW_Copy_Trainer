@@ -690,8 +690,12 @@
     onPracticePlayEnd();
   }
   // 正解のときの「ピンポン」（高い音→低い音）。音量・ミュートは masterGain に従い、stopAudio では止めない
+  // 鳴り終わる時刻を覚えておき、モールスはそれ以降に鳴らす（chimeWaitMs）
+  var CHIME_MS = 680, chimeUntil = 0;
+  function chimeWaitMs(){ return Math.max(0, chimeUntil - performance.now()); }
   function playChime(){
     var ctx = ensureAudioCtx(), t0 = ctx.currentTime + 0.02;
+    chimeUntil = performance.now() + CHIME_MS;
     [[1318.5, 0], [1046.5, 0.17]].forEach(function(n){   // E6 → C6
       var osc = ctx.createOscillator(), g = ctx.createGain(), t = t0 + n[1];
       osc.type = 'sine';
@@ -873,7 +877,7 @@
   }
   function practicePlay(){
     if(practicePlaying || !practiceAnswer) return;
-    playLoop(practiceAnswer, 0, practiceResume);
+    playLoop(practiceAnswer, chimeWaitMs(), practiceResume);
     practiceResume = 0;
     visToken = player.token;
     setPracticePlaying(true);
@@ -881,7 +885,7 @@
   function practiceReplay(){
     if(!practiceAnswer) return;
     practiceResume = 0;
-    playLoop(practiceAnswer);
+    playLoop(practiceAnswer, chimeWaitMs());
     visToken = player.token;
     setPracticePlaying(true);
     els.guessInput.focus();
@@ -1154,7 +1158,7 @@
     }
     if(game.state === 'running'){
       setStatus(runStatus());
-      var gap = Math.max(700, computeTiming().wordGap * 2 * 1000);
+      var gap = Math.max(700, computeTiming().wordGap * 2 * 1000, chimeWaitMs() + 300);   // 正解音が鳴り終わって一呼吸おいてから
       playLoop(q.play, gap);
     }
   }
@@ -1198,7 +1202,7 @@
     setStatus(runStatus());
     renderControls();
     var r = game.resume; game.resume = null;
-    playLoop(game.cur.play, 0, r && r.q === game.cur ? r.seg : 0);
+    playLoop(game.cur.play, chimeWaitMs(), r && r.q === game.cur ? r.seg : 0);
     els.atkInput.focus();
   }
   function abortGame(){
@@ -1237,7 +1241,7 @@
   els.atkInput.addEventListener('input', onAttackInput);
   els.atkInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); onAttackEnter(); } });
   els.atkPauseBtn.addEventListener('click', function(){ if(game.state === 'running') pauseGame(); else resumeGame(); });
-  els.atkReplayBtn.addEventListener('click', function(){ if(game.state === 'running'){ ensureAudioCtx(); playLoop(game.cur.play); els.atkInput.focus(); } });
+  els.atkReplayBtn.addEventListener('click', function(){ if(game.state === 'running'){ ensureAudioCtx(); playLoop(game.cur.play, chimeWaitMs()); els.atkInput.focus(); } });
   els.atkMuteBtn.addEventListener('click', function(){ muted = !muted; applyVolume(); renderControls(); });
   els.atkQuitBtn.addEventListener('click', function(){
     if(!(game.state === 'running' || game.state === 'paused')) return;
