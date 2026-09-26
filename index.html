@@ -89,6 +89,7 @@
   .ghost-btn:hover{ color:var(--text); border-color:var(--accent); }
 
   .answer-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .input-hint{ margin-top:8px; font-size:.85rem; color:var(--gold); }
   .code-input{
     flex:1 1 200px; min-width:0; font-family:"Space Mono",monospace; font-size:1.05rem;
     text-transform:uppercase; letter-spacing:.05em; padding:10px 14px; border-radius:9px;
@@ -283,6 +284,7 @@
           <input id="guessInput" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="聞こえた内容を入力…">
           <button id="checkBtn" class="btn accent">判定する</button>
         </div>
+        <p id="guessHint" class="input-hint" role="alert" hidden>答えを入力してください。</p>
         <div id="feedback" class="feedback" hidden>
           <div class="feedback-row"><span class="fb-label">あなたの回答</span><span id="fbGuess" class="mono"></span></div>
           <div class="feedback-row"><span class="fb-label">正解</span><span id="fbAnswer" class="mono"></span></div>
@@ -568,7 +570,7 @@
   // ---------- elements ----------
   var els = {};
   ['tabPractice','tabAttack','practicePanel','attackPanel','statsPanel','hsPanel','practiceSettings',
-   'playStatus','playBtn','pReplayBtn','nextBtn','visBtn','visWrap','visCanvas','chimeBtn','correctMark','checkBtn','guessInput','feedback','fbGuess','fbAnswer','fbMorse','fbVerdict',
+   'playStatus','playBtn','pReplayBtn','nextBtn','visBtn','visWrap','visCanvas','chimeBtn','correctMark','checkBtn','guessInput','guessHint','feedback','fbGuess','fbAnswer','fbMorse','fbVerdict',
    'charsetSel','groupLenField','groupLen','groupLenVal','groupLenLabelText','groupLenNote',
    'wcRange','wcVal','wfRange','wfVal','volRange','volVal','speedLockNote',
    'statRounds','statCorrect','statAcc','statStreak','statBest','resetStatsBtn','logList','refGrid',
@@ -922,6 +924,7 @@
     practiceResume = 0;
     practiceAnswer = practiceGenerate();
     els.guessInput.value = '';
+    els.guessHint.hidden = true;
     els.feedback.hidden = true;
     roundDone = false;
     els.checkBtn.disabled = false;
@@ -959,6 +962,12 @@
   }
   function practiceCheck(){
     if(roundDone || !practiceAnswer) return;
+    if(!normalize(els.guessInput.value, false)){   // 未入力なら判定しない（成績にも数えない。再生もそのまま）
+      els.guessHint.hidden = false;
+      els.guessInput.focus();
+      return;
+    }
+    els.guessHint.hidden = true;
     stopAudio();
     practiceResume = 0;
     var wm = isWordMode(els.charsetSel.value);
@@ -985,6 +994,7 @@
   els.pReplayBtn.addEventListener('click', practiceReplay);
   els.checkBtn.addEventListener('click', practiceCheck);
   els.nextBtn.addEventListener('click', function(){ practiceNewRound(); els.guessInput.focus(); });
+  els.guessInput.addEventListener('input', function(){ els.guessHint.hidden = true; });
   els.guessInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); if(!roundDone) practiceCheck(); else { practiceNewRound(); } }
   });
