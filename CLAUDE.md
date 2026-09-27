@@ -27,6 +27,13 @@ tests/smoke.js        Playwright による簡易動作確認
 - **常にダークモード**（OS のライト/ダーク設定に関係なく）。配色は `:root` の CSS 変数1組だけ。ライト用の配色・切替は持たない。
 - 記録・設定は localStorage のみ（`cwtrainer.settings` / `cwtrainer.stats` / `cwtrainer.highscores`）。すべて try/catch で包む。
 
+## セキュリティ
+
+- **localStorage の値は信用しない**: GitHub Pages などでは同じオリジンの別ページからも書き換えられる。読み込み時に型と範囲をそろえる（`asObj` / `asInt` / `asStr`。設定は既知のキーだけ、数値は範囲内に丸め、ハイスコアは点数が正の整数でない記録を捨てる）。セレクトの値が選択肢に無ければ初期値に戻す。
+- **HTML に入れる値はすべて `escapeHtml`**（innerHTML を使う箇所）。数値でも省略しない。ハイスコアの点数・速度が未エスケープで、細工した記録からスクリプトが動く不具合があった（修正済み。`tests/smoke.js` に回帰テストあり）。
+- `<meta http-equiv="Content-Security-Policy">` で、読み込めるのをページ内のスクリプト・スタイルと Google Fonts だけに制限（外部スクリプト・通信・埋め込みは禁止）。外部リソースを増やすときはここも直す。
+- 出題データ（ログ・MASTER・市郡区番号）は `build_data.py` が正規表現で形式を確かめてから埋め込むので、文字列から JS を壊す値は入らない。形式チェックを緩めないこと。
+
 ## 音声・タイミング
 
 - トーンは **760Hz 固定**（UI には表示しない）。正弦波、立ち上がり/立ち下がり 4ms。音量は masterGain で調整、ミュートも masterGain。

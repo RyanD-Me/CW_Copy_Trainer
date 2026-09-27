@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0a1310">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CW Copy Trainer</title>
+<!-- 読み込めるのはこのページの中のスクリプト・スタイルと Google Fonts だけ（外部スクリプト・通信・埋め込みは禁止） -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -562,10 +564,32 @@
   function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
   var DEFAULT_SETTINGS = { charset:'letters', groupLen:1, wc:16, wf:16, vol:60, mode:'practice', name:'', vis:false, chime:true };
-  var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('cwtrainer.settings', {}));
-  var stats = Object.assign({ rounds:0, correct:0, streak:0, best:0 }, loadJSON('cwtrainer.stats', {}));
+  // localStorage は同じオリジンの他のページからも書き換えられるので、読み込んだ値は型と範囲をそろえてから使う
+  function asObj(v){ return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+  function asInt(v, min, max, def){ var n = Math.round(Number(v)); return isFinite(n) ? Math.min(max, Math.max(min, n)) : def; }
+  function asStr(v, def, maxLen){ return typeof v === 'string' ? v.slice(0, maxLen || 64) : def; }
+  var settings = (function(raw){
+    var d = DEFAULT_SETTINGS;
+    return {
+      charset: asStr(raw.charset, d.charset), groupLen: asInt(raw.groupLen, 1, 8, d.groupLen),
+      wc: asInt(raw.wc, 5, 60, d.wc), wf: asInt(raw.wf, 5, 60, d.wf), vol: asInt(raw.vol, 0, 100, d.vol),
+      mode: raw.mode === 'attack' ? 'attack' : 'practice', name: asStr(raw.name, '', 16),
+      vis: raw.vis === true, chime: raw.chime !== false,
+      atkMode: asStr(raw.atkMode, undefined), atkContest: asStr(raw.atkContest, undefined)
+    };
+  })(asObj(loadJSON('cwtrainer.settings', {})));
+  var stats = (function(raw){
+    var BIG = 1e9;
+    return { rounds:asInt(raw.rounds, 0, BIG, 0), correct:asInt(raw.correct, 0, BIG, 0), streak:asInt(raw.streak, 0, BIG, 0), best:asInt(raw.best, 0, BIG, 0) };
+  })(asObj(loadJSON('cwtrainer.stats', {})));
   var highscores = loadJSON('cwtrainer.highscores', []);
-  if(!Array.isArray(highscores)) highscores = [];
+  highscores = (Array.isArray(highscores) ? highscores : []).map(function(h){
+    h = asObj(h);
+    var score = asInt(h.score, 0, 1e6, 0);
+    if(score <= 0) return null;
+    return { id: asStr(h.id, '', 32) || Math.random().toString(36).slice(2, 10), score: score, name: asStr(h.name, '', 16),
+             wc: asInt(h.wc, 5, 60, 0), wf: asInt(h.wf, 5, 60, 0), mode: asStr(h.mode, 'practice'), date: asStr(h.date, '') };
+  }).filter(Boolean);
 
   // ---------- elements ----------
   var els = {};
@@ -633,6 +657,7 @@
   }
   function applySettingsToUI(){
     els.charsetSel.value = settings.charset;
+    if(els.charsetSel.value !== settings.charset){ settings.charset = DEFAULT_SETTINGS.charset; els.charsetSel.value = settings.charset; }
     els.groupLen.max = 8;
     els.groupLen.value = settings.groupLen;
     els.wcRange.value = settings.wc;
@@ -641,7 +666,9 @@
     els.volRange.value = settings.vol;
     els.playerName.value = settings.name || '';
     if(settings.atkMode) els.atkMode.value = settings.atkMode;
+    if(!els.atkMode.value) els.atkMode.value = 'practice';
     if(settings.atkContest) els.atkContest.value = settings.atkContest;
+    if(!els.atkContest.value) els.atkContest.value = 'allja';
     setVisualizer(!!settings.vis);
     els.chimeBtn.setAttribute('aria-pressed', settings.chime !== false ? 'true' : 'false');
     refreshGroupLenMode();
@@ -1329,10 +1356,10 @@
       var cls = (i===0 ? 'rank1' : '') + (h.id === freshId ? ' fresh' : '');
       return '<tr class="'+cls+'">' +
         '<td class="num">'+(i+1)+'</td>' +
-        '<td class="score">'+h.score+'</td>' +
+        '<td class="score">'+escapeHtml(h.score)+'</td>' +
         '<td>'+(h.name ? escapeHtml(h.name) : '<span class="note">—</span>')+'</td>' +
-        '<td class="num">'+h.wc+' / '+h.wf+' WPM</td>' +
-        '<td class="num">'+fmtDate(h.date)+'</td>' +
+        '<td class="num">'+escapeHtml(h.wc)+' / '+escapeHtml(h.wf)+' WPM</td>' +
+        '<td class="num">'+escapeHtml(fmtDate(h.date))+'</td>' +
         '<td><button class="hs-del" data-id="'+escapeHtml(h.id)+'" aria-label="この記録を削除" title="削除">✕</button></td>' +
       '</tr>';
     }).join('');

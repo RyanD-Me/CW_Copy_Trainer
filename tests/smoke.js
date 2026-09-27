@@ -37,6 +37,22 @@ const { chromium } = require('playwright');
     }
   }
 
+  // localStorage に細工した値が入っていても、スクリプトが動かず画面も壊れないこと
+  await page.evaluate(() => {
+    localStorage.setItem('cwtrainer.highscores', JSON.stringify([
+      { id: 'x"><img src=x onerror=window.__xss=1>', score: '<img src=x onerror=window.__xss=1>', name: '<img src=x onerror=window.__xss=1>',
+        wc: '<img src=x onerror=window.__xss=1>', wf: 14, mode: 'practice', date: '<x>' },
+      { id: 'ok', score: 3, name: '<img src=x onerror=window.__xss=1>', wc: 20, wf: 14, mode: 'practice', date: '2026-01-01T00:00:00Z' }]));
+    localStorage.setItem('cwtrainer.settings', JSON.stringify({ atkMode: 'bogus', atkContest: 'bogus', charset: 'bogus', wc: 'x' }));
+  });
+  await page.reload();
+  await page.click('#tabAttack');
+  await page.waitForTimeout(200);
+  if (await page.evaluate(() => window.__xss === 1)) errors.push('script ran from a crafted high score record');
+  const rows = await page.$$eval('#hsBody tr', rs => rs.length);
+  if (rows !== 1) errors.push(`expected 1 valid high score row, got ${rows}`);
+  await page.evaluate(() => localStorage.clear());
+
   await browser.close();
   if (errors.length) { console.error('FAIL', errors); process.exit(1); }
   console.log('OK');
