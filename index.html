@@ -333,6 +333,7 @@
               <input id="playerName" class="text-input" type="text" maxlength="16" autocomplete="off" placeholder="例: JA1XYZ">
             </div>
             <button id="atkStartBtn" class="btn primary">▶ スタート</button>
+            <span class="note">R キーでもスタート</span>
           </div>
         </div>
 
@@ -366,6 +367,7 @@
           <div class="controls-row">
             <button id="atkRetryBtn" class="btn primary">▶ もう一度挑戦</button>
             <button id="atkBackBtn" class="btn">戻る</button>
+            <span class="note">R キーでもう一度</span>
           </div>
         </div>
       </section>
@@ -1146,7 +1148,7 @@
     els.atkMuteBtn.textContent = muted ? '🔈 ミュート解除' : '🔇 ミュート';
     els.atkMuteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
     els.atkMuteBtn.classList.toggle('on', muted);
-    els.atkInput.disabled = !(running || paused);
+    els.atkInput.disabled = !(running || paused || game.state === 'countdown');   // カウントダウン中から入力欄にカーソルを置く
   }
   function setStatus(text, big){
     els.atkStatus.textContent = text;
@@ -1184,10 +1186,12 @@
       else { beginRunning(); }
     }
     game.countdownTimer = setTimeout(tick, 800);
+    els.atkInput.focus();
   }
   function beginRunning(){
     game.state = 'running';
     game.cur = makeQuestion();
+    els.atkInput.value = '';   // カウントダウン中に打った分は捨てる
     game.lastTick = performance.now();
     setStatus(runStatus());
     renderControls();
@@ -1291,6 +1295,17 @@
   }
 
   els.atkStartBtn.addEventListener('click', startGame);
+  // R キーでスタート（開始前・結果の画面で、文字の入力欄にいないとき）
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'r' && e.key !== 'R') return;
+    if(e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+    if(els.attackPanel.hidden || !els.modal.hidden) return;
+    if(game.state !== 'idle' && game.state !== 'over') return;
+    var t = e.target;
+    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    e.preventDefault();
+    startGame();
+  });
   els.atkRetryBtn.addEventListener('click', startGame);
   els.atkBackBtn.addEventListener('click', function(){ game.state = 'idle'; setAttackView('idle'); renderHighscores(null); });
   els.atkMode.addEventListener('change', function(){ persistSettings(); refreshAttackMode(); });
